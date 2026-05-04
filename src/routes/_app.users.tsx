@@ -25,7 +25,7 @@ function UsersPage() {
   const setRole = async (userId: string, role: string) => {
     await supabase.from("user_roles").delete().eq("user_id", userId);
     if (role) {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: role as "admin" | "vendedor" | "produccion" });
       if (error) return toast.error(error.message);
     }
     toast.success("Rol actualizado");

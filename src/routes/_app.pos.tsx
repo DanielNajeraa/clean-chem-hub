@@ -103,8 +103,8 @@ function POS() {
       _subtotal: totals.subtotal,
       _discount: totals.discount,
       _total: totals.total,
-      _items: items,
-    });
+      _items: items as any,
+    } as any);
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Venta registrada");

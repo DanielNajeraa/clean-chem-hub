@@ -48,7 +48,8 @@ function RawMaterialsPage() {
   const saveMov = async () => {
     if (!mov.raw_material_id || !mov.quantity) return toast.error("Datos incompletos");
     const q = Number(mov.quantity);
-    const rm = rms.find((r: any) => r.id === mov.raw_material_id);
+    const rm: any = rms.find((r: any) => r.id === mov.raw_material_id);
+    if (!rm) return toast.error("Material no encontrado");
     const newStock = mov.movement_type === "in" ? Number(rm.stock) + q : Number(rm.stock) - q;
     if (newStock < 0) return toast.error("Stock no puede ser negativo");
     const { error: e1 } = await supabase.from("raw_materials").update({ stock: newStock }).eq("id", mov.raw_material_id);
