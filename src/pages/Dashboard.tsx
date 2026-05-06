@@ -1,12 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, StatCard } from "@/components/Page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, ShoppingCart, Beaker, Factory } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-
-export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
 function Dashboard() {
   const { role } = useAuth();
@@ -67,3 +64,5 @@ function Dashboard() {
     </div>
   );
 }
+
+export default Dashboard;

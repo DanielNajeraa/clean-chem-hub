@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-
-export const Route = createFileRoute("/_app/products")({ component: ProductsPage });
 
 function ProductsPage() {
   const { role } = useAuth();
@@ -178,3 +175,5 @@ function FormulaViewer({ formulaId, onClose }: { formulaId: string | null; onClo
     </Dialog>
   );
 }
+
+export default ProductsPage;

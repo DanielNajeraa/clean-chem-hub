@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingCart, Package, FlaskConical, Beaker,
   Factory, Users, Receipt, Settings, LogOut, UserCog, Sparkles,
@@ -27,7 +27,7 @@ const items: Item[] = [
 
 export function AppSidebar() {
   const { role, user, signOut } = useAuth();
-  const path = useRouterState({ select: (r) => r.location.pathname });
+  const { pathname } = useLocation();
   const visible = items.filter((i) => role && i.roles.includes(role));
 
   return (
@@ -49,7 +49,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {visible.map((item) => {
-                const active = path === item.url;
+                const active = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active}>

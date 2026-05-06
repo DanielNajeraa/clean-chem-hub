@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/login")({ component: Login });
-
-function Login() {
+export default function Login() {
   const { user, signIn, refreshRole } = useAuth();
   const nav = useNavigate();
   const [email, setEmail] = useState("");
@@ -19,7 +17,7 @@ function Login() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { if (user) nav({ to: "/dashboard" }); }, [user, nav]);
+  useEffect(() => { if (user) nav("/dashboard"); }, [user, nav]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +27,7 @@ function Login() {
     if (error) { toast.error(error); return; }
     await refreshRole();
     toast.success("Bienvenido");
-    nav({ to: "/dashboard" });
+    nav("/dashboard");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -40,7 +38,6 @@ function Login() {
       options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/dashboard` },
     });
     if (error) { setLoading(false); toast.error(error.message); return; }
-    // Bootstrap: if no admin exists, make this user admin.
     const userId = data.user?.id;
     if (userId) {
       const { count } = await supabase.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "admin");
@@ -53,7 +50,7 @@ function Login() {
       await refreshRole();
     }
     setLoading(false);
-    nav({ to: "/dashboard" });
+    nav("/dashboard");
   };
 
   return (

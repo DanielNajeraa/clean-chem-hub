@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,8 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Factory, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_app/production")({ component: ProductionPage });
 
 function ProductionPage() {
   const qc = useQueryClient();
@@ -133,3 +130,5 @@ function ProductionPage() {
     </div>
   );
 }
+
+export default ProductionPage;

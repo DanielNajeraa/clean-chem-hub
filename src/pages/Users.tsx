@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -6,8 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_app/users")({ component: UsersPage });
 
 const ROLES = ["admin", "vendedor", "produccion"] as const;
 
@@ -60,3 +57,5 @@ function UsersPage() {
     </div>
   );
 }
+
+export default UsersPage;

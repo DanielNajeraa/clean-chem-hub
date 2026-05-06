@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,8 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_app/customers")({ component: CustomersPage });
 
 function CustomersPage() {
   const qc = useQueryClient();
@@ -100,3 +97,5 @@ function CustomersPage() {
     </div>
   );
 }
+
+export default CustomersPage;

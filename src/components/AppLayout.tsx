@@ -1,26 +1,20 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { Outlet, Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/_app")({ component: AppLayout });
-
-function AppLayout() {
+export default function AppLayout() {
   const { user, loading, role } = useAuth();
-  const nav = useNavigate();
-  useEffect(() => {
-    if (!loading && !user) nav({ to: "/login" });
-  }, [user, loading, nav]);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
+  if (!user) return <Navigate to="/login" replace />;
 
   if (!role) {
     return (

@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -7,8 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Eye } from "lucide-react";
-
-export const Route = createFileRoute("/_app/tickets")({ component: TicketsPage });
 
 function TicketsPage() {
   const [view, setView] = useState<string | null>(null);
@@ -79,3 +76,5 @@ function TicketsPage() {
     </div>
   );
 }
+
+export default TicketsPage;

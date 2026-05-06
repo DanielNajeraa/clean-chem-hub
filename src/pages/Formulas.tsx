@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,8 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_app/formulas")({ component: FormulasPage });
 
 function FormulasPage() {
   const qc = useQueryClient();
@@ -151,3 +148,5 @@ function FormulasPage() {
     </div>
   );
 }
+
+export default FormulasPage;

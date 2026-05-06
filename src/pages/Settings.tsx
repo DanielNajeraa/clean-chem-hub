@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -9,8 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
 
 function SettingsPage() {
   const qc = useQueryClient();
@@ -80,3 +77,5 @@ function SettingsPage() {
     </div>
   );
 }
+
+export default SettingsPage;

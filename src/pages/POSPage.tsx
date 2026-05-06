@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Minus, Trash2, Search, Printer, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-
-export const Route = createFileRoute("/_app/pos")({ component: POS });
 
 type Product = {
   id: string; name: string; price: number; stock: number;
@@ -289,3 +286,5 @@ function TicketDialog({ saleId, onClose }: { saleId: string | null; onClose: () 
     </Dialog>
   );
 }
+
+export default POS;

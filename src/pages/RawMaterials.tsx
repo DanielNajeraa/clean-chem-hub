@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-
-export const Route = createFileRoute("/_app/raw-materials")({ component: RawMaterialsPage });
 
 function RawMaterialsPage() {
   const qc = useQueryClient();
@@ -175,3 +172,5 @@ function RawMaterialsPage() {
     </div>
   );
 }
+
+export default RawMaterialsPage;
