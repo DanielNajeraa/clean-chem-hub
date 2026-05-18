@@ -149,8 +149,8 @@ function ProductionPage() {
               <TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Producto</TableHead><TableHead>Litros</TableHead><TableHead>Costo</TableHead><TableHead>Vendedor</TableHead></TableRow></TableHeader>
               <TableBody>
                 {orders.map((o: any) => (
-                  <>
-                    <TableRow key={o.id} className="cursor-pointer" onClick={() => setExpanded(expanded === o.id ? null : o.id)}>
+                  <Fragment key={o.id}>
+                    <TableRow className="cursor-pointer" onClick={() => setExpanded(expanded === o.id ? null : o.id)}>
                       <TableCell className="text-xs">{new Date(o.created_at).toLocaleString()}</TableCell>
                       <TableCell>{o.products?.name}</TableCell>
                       <TableCell>{Number(o.quantity)} L</TableCell>
@@ -173,7 +173,7 @@ function ProductionPage() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
