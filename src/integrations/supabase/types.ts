@@ -116,6 +116,61 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_containers: {
+        Row: {
+          created_at: string
+          filled_at: string
+          id: string
+          liters_available: number
+          liters_initial: number
+          product_id: string
+          production_order_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          filled_at?: string
+          id?: string
+          liters_available: number
+          liters_initial: number
+          product_id: string
+          production_order_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          filled_at?: string
+          id?: string
+          liters_available?: number
+          liters_initial?: number
+          product_id?: string
+          production_order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_containers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_stock_liters"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "inventory_containers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_containers_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           created_at: string
@@ -154,6 +209,54 @@ export type Database = {
           },
         ]
       }
+      product_presentations: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          is_bulk: boolean
+          label: string
+          liters: number
+          price: number
+          product_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          is_bulk?: boolean
+          label: string
+          liters: number
+          price?: number
+          product_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          is_bulk?: boolean
+          label?: string
+          liters?: number
+          price?: number
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_presentations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_stock_liters"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_presentations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_orders: {
         Row: {
           created_at: string
@@ -180,6 +283,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "production_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_stock_liters"
+            referencedColumns: ["product_id"]
+          },
           {
             foreignKeyName: "production_orders_product_id_fkey"
             columns: ["product_id"]
@@ -297,6 +407,78 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_container_items: {
+        Row: {
+          container_id: string
+          dispatch_type: string
+          id: string
+          liters_dispatched: number
+          presentation_id: string | null
+          product_id: string
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          container_id: string
+          dispatch_type: string
+          id?: string
+          liters_dispatched: number
+          presentation_id?: string | null
+          product_id: string
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          container_id?: string
+          dispatch_type?: string
+          id?: string
+          liters_dispatched?: number
+          presentation_id?: string | null
+          product_id?: string
+          sale_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_container_items_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_container_items_presentation_id_fkey"
+            columns: ["presentation_id"]
+            isOneToOne: false
+            referencedRelation: "product_presentations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_container_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_stock_liters"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "sale_container_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_container_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           id: string
@@ -326,6 +508,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_stock_liters"
+            referencedColumns: ["product_id"]
+          },
           {
             foreignKeyName: "sale_items_product_id_fkey"
             columns: ["product_id"]
@@ -430,7 +619,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      product_stock_liters: {
+        Row: {
+          containers_active: number | null
+          containers_empty: number | null
+          containers_full: number | null
+          containers_partial: number | null
+          product_id: string | null
+          product_name: string | null
+          total_liters_available: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
@@ -443,6 +643,17 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      process_liquid_sale: {
+        Args: {
+          _customer_id: string
+          _discount: number
+          _items: Json
+          _payment_method: string
+          _subtotal: number
+          _total: number
+        }
+        Returns: string
       }
       process_production: {
         Args: { _product_id: string; _quantity: number }

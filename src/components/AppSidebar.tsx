@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, ShoppingCart, Package, FlaskConical, Beaker,
-  Factory, Users, Receipt, Settings, LogOut, UserCog, Sparkles,
+  LayoutDashboard, ShoppingCart, Package, FlaskConical, Beaker, Droplet,
+  Factory, Users, Receipt, Settings, LogOut, UserCog, Sparkles, Tags,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -15,7 +15,9 @@ type Item = { title: string; url: string; icon: typeof LayoutDashboard; roles: A
 const items: Item[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: ["admin","vendedor","produccion"] },
   { title: "POS", url: "/pos", icon: ShoppingCart, roles: ["admin","vendedor"] },
+  { title: "Inventario", url: "/inventory", icon: Droplet, roles: ["admin","vendedor","produccion"] },
   { title: "Productos", url: "/products", icon: Package, roles: ["admin","vendedor"] },
+  { title: "Presentaciones", url: "/presentations", icon: Tags, roles: ["admin"] },
   { title: "Fórmulas", url: "/formulas", icon: FlaskConical, roles: ["admin"] },
   { title: "Materia Prima", url: "/raw-materials", icon: Beaker, roles: ["admin","produccion"] },
   { title: "Producción", url: "/production", icon: Factory, roles: ["admin","produccion"] },

@@ -9,7 +9,9 @@ import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import Dashboard from "@/pages/Dashboard";
 import POSPage from "@/pages/POSPage";
+import Inventory from "@/pages/Inventory";
 import Products from "@/pages/Products";
+import Presentations from "@/pages/Presentations";
 import Formulas from "@/pages/Formulas";
 import RawMaterials from "@/pages/RawMaterials";
 import Production from "@/pages/Production";
@@ -34,7 +36,9 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/pos" element={<POSPage />} />
+                <Route path="/inventory" element={<Inventory />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/presentations" element={<Presentations />} />
                 <Route path="/formulas" element={<Formulas />} />
                 <Route path="/raw-materials" element={<RawMaterials />} />
                 <Route path="/production" element={<Production />} />
