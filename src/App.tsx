@@ -36,7 +36,9 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/pos" element={<POSPage />} />
+                <Route path="/inventory" element={<Inventory />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/presentations" element={<Presentations />} />
                 <Route path="/formulas" element={<Formulas />} />
                 <Route path="/raw-materials" element={<RawMaterials />} />
                 <Route path="/production" element={<Production />} />
