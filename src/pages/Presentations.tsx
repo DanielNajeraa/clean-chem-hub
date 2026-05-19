@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -10,12 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 const DEFAULTS = [
   { label: "20L", liters: 20, is_bulk: false },
   { label: "5L", liters: 5, is_bulk: false },
+  { label: "4L", liters: 4, is_bulk: false },
   { label: "1L", liters: 1, is_bulk: false },
   { label: "Granel", liters: 1, is_bulk: true },
 ];
@@ -36,10 +37,30 @@ function PresentationsPage() {
     queryFn: async () => (await supabase.from("product_presentations").select("*").eq("product_id", selProduct).order("liters", { ascending: false })).data ?? [],
   });
 
+  const missingDefaults = useMemo(() => {
+    const existing = new Set(presentations.map((p: any) => p.label.toLowerCase()));
+    return DEFAULTS.filter((d) => !existing.has(d.label.toLowerCase()));
+  }, [presentations]);
+
   const startNew = () => { setEditing({ product_id: selProduct, label: "", liters: 1, price: 0, is_bulk: false, active: true }); setOpen(true); };
   const startEdit = (p: any) => { setEditing({ ...p }); setOpen(true); };
+
   const addDefault = async (d: typeof DEFAULTS[number]) => {
     const { error } = await supabase.from("product_presentations").insert({ product_id: selProduct, label: d.label, liters: d.liters, price: 0, is_bulk: d.is_bulk });
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["presentations"] });
+  };
+  const addAllDefaults = async () => {
+    if (missingDefaults.length === 0) return;
+    const rows = missingDefaults.map((d) => ({ product_id: selProduct, label: d.label, liters: d.liters, price: 0, is_bulk: d.is_bulk }));
+    const { error } = await supabase.from("product_presentations").insert(rows);
+    if (error) return toast.error(error.message);
+    toast.success(`${rows.length} presentaciones agregadas. Edita los precios.`);
+    qc.invalidateQueries({ queryKey: ["presentations"] });
+  };
+
+  const updatePrice = async (id: string, price: number) => {
+    const { error } = await supabase.from("product_presentations").update({ price }).eq("id", id);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["presentations"] });
   };
@@ -67,7 +88,7 @@ function PresentationsPage() {
 
   return (
     <div>
-      <PageHeader title="Presentaciones y precios" subtitle="Define cómo se vende cada producto (20L, 5L, 1L, granel)" />
+      <PageHeader title="Presentaciones y precios" subtitle="Define cómo se vende cada producto líquido (20L, 5L, 4L, 1L, granel)" />
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="min-w-[260px]">
@@ -78,15 +99,22 @@ function PresentationsPage() {
           </Select>
         </div>
         {selProduct && (
-          <Button onClick={startNew} className="bg-warning text-warning-foreground hover:bg-warning/90"><Plus className="mr-2 h-4 w-4" />Nueva presentación</Button>
+          <>
+            {missingDefaults.length > 0 && (
+              <Button onClick={addAllDefaults} variant="secondary">
+                <Sparkles className="mr-2 h-4 w-4" />Agregar todas ({missingDefaults.length})
+              </Button>
+            )}
+            <Button onClick={startNew} variant="outline"><Plus className="mr-2 h-4 w-4" />Personalizada</Button>
+          </>
         )}
       </div>
 
-      {selProduct && presentations.length === 0 && (
+      {selProduct && missingDefaults.length > 0 && (
         <div className="mb-4 rounded-md border bg-muted/30 p-4">
-          <p className="mb-2 text-sm font-medium">Agregar presentaciones típicas:</p>
+          <p className="mb-2 text-sm font-medium">Agregar individualmente:</p>
           <div className="flex flex-wrap gap-2">
-            {DEFAULTS.map((d) => <Button key={d.label} size="sm" variant="outline" onClick={() => addDefault(d)}><Plus className="mr-1 h-3 w-3" />{d.label}</Button>)}
+            {missingDefaults.map((d) => <Button key={d.label} size="sm" variant="outline" onClick={() => addDefault(d)}><Plus className="mr-1 h-3 w-3" />{d.label}</Button>)}
           </div>
         </div>
       )}
@@ -95,7 +123,7 @@ function PresentationsPage() {
         <div className="rounded-md border bg-card">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>Etiqueta</TableHead><TableHead>Litros</TableHead><TableHead>Precio</TableHead>
+              <TableHead>Etiqueta</TableHead><TableHead>Litros</TableHead><TableHead className="w-[160px]">Precio</TableHead>
               <TableHead>Tipo</TableHead><TableHead>Estado</TableHead><TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
@@ -103,7 +131,20 @@ function PresentationsPage() {
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.label}</TableCell>
                   <TableCell>{Number(p.liters)} L</TableCell>
-                  <TableCell>${Number(p.price).toFixed(2)}{p.is_bulk && " /L"}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">$</span>
+                      <Input
+                        type="number" step="0.01" defaultValue={Number(p.price)}
+                        className="h-8 w-24"
+                        onBlur={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v !== Number(p.price)) updatePrice(p.id, v);
+                        }}
+                      />
+                      {p.is_bulk && <span className="text-xs text-muted-foreground">/L</span>}
+                    </div>
+                  </TableCell>
                   <TableCell>{p.is_bulk ? <Badge className="bg-warning/20 text-warning-foreground">Granel</Badge> : <Badge variant="outline">Envase</Badge>}</TableCell>
                   <TableCell>{p.active ? <Badge className="bg-success text-success-foreground">Activa</Badge> : <Badge variant="outline">Inactiva</Badge>}</TableCell>
                   <TableCell className="text-right">
