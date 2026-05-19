@@ -27,8 +27,8 @@ function PresentationsPage() {
   const [editing, setEditing] = useState<any>(null);
 
   const { data: products = [] } = useQuery({
-    queryKey: ["products-list"],
-    queryFn: async () => (await supabase.from("products").select("id,name").order("name")).data ?? [],
+    queryKey: ["products-list-liquid"],
+    queryFn: async () => (await supabase.from("products").select("id,name").eq("unit_type", "litro").order("name")).data ?? [],
   });
   const { data: presentations = [] } = useQuery({
     enabled: !!selProduct,

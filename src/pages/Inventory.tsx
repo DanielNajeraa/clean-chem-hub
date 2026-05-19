@@ -62,7 +62,7 @@ function InventoryPage() {
 
   return (
     <div>
-      <PageHeader title="Inventario de garrafones" subtitle="Estado en tiempo real por producto (FIFO)" />
+      <PageHeader title="Inventario de garrafones" subtitle="Estado en tiempo real de productos líquidos (FIFO). Los productos por pieza se gestionan desde Productos." />
 
       {alerts.length > 0 && (
         <div className="mb-4 space-y-2">
