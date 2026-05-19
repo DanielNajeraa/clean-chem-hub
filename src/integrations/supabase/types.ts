@@ -656,7 +656,11 @@ export type Database = {
         Returns: string
       }
       process_production: {
-        Args: { _product_id: string; _quantity: number }
+        Args: {
+          _container_liters?: number
+          _product_id: string
+          _quantity: number
+        }
         Returns: string
       }
       process_sale: {
