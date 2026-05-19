@@ -33,7 +33,7 @@ function ProductsPage() {
     queryFn: async () => (await supabase.from("formulas").select("*")).data ?? [],
   });
 
-  const startNew = () => { setEditing({ name: "", category_id: null, presentation: "1L", unit_type: "unidad", is_bulk: false, price: 0, stock: 0, formula_id: null }); setOpen(true); };
+  const startNew = () => { setEditing({ name: "", category_id: null, presentation: "", unit_type: "pieza", is_bulk: false, price: 0, stock: 0, formula_id: null }); setOpen(true); };
   const startEdit = (p: any) => { setEditing({ ...p }); setOpen(true); };
 
   const save = async () => {
@@ -69,18 +69,24 @@ function ProductsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead><TableHead>Categoría</TableHead><TableHead>Presentación</TableHead>
-              <TableHead>Precio</TableHead><TableHead>Stock</TableHead>{isAdmin && <TableHead>Fórmula</TableHead>}<TableHead></TableHead>
+              <TableHead>Nombre</TableHead><TableHead>Categoría</TableHead><TableHead>Tipo</TableHead>
+              <TableHead>Precio base</TableHead><TableHead>Stock</TableHead>{isAdmin && <TableHead>Fórmula</TableHead>}<TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((p: any) => (
+            {products.map((p: any) => {
+              const isLiquid = p.unit_type === "litro";
+              return (
               <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name} {p.is_bulk && <Badge variant="secondary" className="ml-1 bg-warning/20">Granel</Badge>}</TableCell>
+                <TableCell className="font-medium">{p.name}</TableCell>
                 <TableCell>{p.categories?.name ?? "—"}</TableCell>
-                <TableCell>{p.presentation}</TableCell>
-                <TableCell>${Number(p.price).toFixed(2)}{p.is_bulk && "/L"}</TableCell>
-                <TableCell><span className={Number(p.stock) <= 5 ? "text-destructive font-medium" : ""}>{Number(p.stock)}</span></TableCell>
+                <TableCell>
+                  {isLiquid
+                    ? <Badge variant="outline" className="bg-primary/10"><Droplet className="mr-1 h-3 w-3" />Litro</Badge>
+                    : <Badge variant="outline"><Package className="mr-1 h-3 w-3" />Pieza</Badge>}
+                </TableCell>
+                <TableCell>${Number(p.price).toFixed(2)}</TableCell>
+                <TableCell><span className={Number(p.stock) <= 5 ? "text-destructive font-medium" : ""}>{Number(p.stock)} {isLiquid ? "L" : "pz"}</span></TableCell>
                 {isAdmin && <TableCell>
                   {p.formulas?.name ? <Button size="sm" variant="outline" onClick={() => setViewFormula(p.formula_id)}><Beaker className="mr-1 h-3 w-3" />{p.formulas.name}</Button> : "—"}
                 </TableCell>}
@@ -91,7 +97,7 @@ function ProductsPage() {
                   </>}
                 </TableCell>
               </TableRow>
-            ))}
+            );})}
           </TableBody>
         </Table>
       </div>
@@ -109,25 +115,33 @@ function ProductsPage() {
                     <SelectContent>{categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div><Label>Presentación</Label><Input value={editing.presentation} onChange={(e) => setEditing({ ...editing, presentation: e.target.value })} placeholder="1L, 4L, 20L, Relleno" /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Precio</Label><Input type="number" step="0.01" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} /></div>
-                <div><Label>Stock</Label><Input type="number" step="0.01" value={editing.stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} /></div>
-              </div>
-              <div className="flex items-center justify-between rounded-md border p-3">
-                <div>
-                  <Label>¿Es producto a granel (relleno)?</Label>
-                  <p className="text-xs text-muted-foreground">El precio se cobra por litro y stock se mide en litros.</p>
+                <div><Label>Tipo de unidad</Label>
+                  <Select value={editing.unit_type} onValueChange={(v) => setEditing({ ...editing, unit_type: v, is_bulk: v === "litro" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="litro">Litro (líquido, con garrafones)</SelectItem>
+                      <SelectItem value="pieza">Pieza (stock simple)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Switch checked={editing.is_bulk} onCheckedChange={(v) => setEditing({ ...editing, is_bulk: v, unit_type: v ? "litro" : "unidad" })} />
               </div>
-              <div><Label>Fórmula</Label>
-                <Select value={editing.formula_id ?? ""} onValueChange={(v) => setEditing({ ...editing, formula_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Sin fórmula" /></SelectTrigger>
-                  <SelectContent>{formulas.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
-                </Select>
+              <p className="rounded-md border bg-muted/30 p-2 text-xs text-muted-foreground">
+                {editing.unit_type === "litro"
+                  ? "🛢 Líquido: el stock se mide en litros y al producir se generan garrafones. Las presentaciones (1L, 5L, 20L, granel) y sus precios se definen en Presentaciones."
+                  : "📦 Pieza: stock por unidades, se vende como cualquier producto convencional (ej. trapeador, escoba)."}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Precio base</Label><Input type="number" step="0.01" value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} /></div>
+                <div><Label>Stock inicial</Label><Input type="number" step="0.01" value={editing.stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} /></div>
               </div>
+              {editing.unit_type === "litro" && (
+                <div><Label>Fórmula</Label>
+                  <Select value={editing.formula_id ?? ""} onValueChange={(v) => setEditing({ ...editing, formula_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Sin fórmula" /></SelectTrigger>
+                    <SelectContent>{formulas.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
               <div><Label>URL imagen (opcional)</Label><Input value={editing.image_url ?? ""} onChange={(e) => setEditing({ ...editing, image_url: e.target.value })} /></div>
             </div>
           )}
