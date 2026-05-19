@@ -28,8 +28,12 @@ function InventoryPage() {
   const { data: stock = [] } = useQuery({
     queryKey: ["product-stock-liters"],
     queryFn: async () => {
-      const { data } = await supabase.from("product_stock_liters" as any).select("*").order("product_name");
-      return (data ?? []) as unknown as StockRow[];
+      const [stockRes, prods] = await Promise.all([
+        supabase.from("product_stock_liters" as any).select("*").order("product_name"),
+        supabase.from("products").select("id,unit_type").eq("unit_type", "litro"),
+      ]);
+      const liquidIds = new Set((prods.data ?? []).map((p: any) => p.id));
+      return ((stockRes.data ?? []) as unknown as StockRow[]).filter((s) => liquidIds.has(s.product_id));
     },
   });
 
