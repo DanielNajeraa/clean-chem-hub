@@ -124,9 +124,27 @@ function TicketsPage() {
                   </Table>
                 </div>
               )}
+              {detail.rawMaterials.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">Materia prima vendida</p>
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Materia prima</TableHead><TableHead>Cantidad</TableHead><TableHead>Precio</TableHead><TableHead>Subtotal</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {detail.rawMaterials.map((i: any) => (
+                        <TableRow key={i.id}>
+                          <TableCell>{i.product_name}</TableCell>
+                          <TableCell>{Number(i.quantity)} {i.raw_materials?.unit ?? ""}</TableCell>
+                          <TableCell>${Number(i.unit_price).toFixed(2)}</TableCell>
+                          <TableCell>${Number(i.subtotal).toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
               {detail.legacy.length > 0 && (
                 <div>
-                  <p className="mb-1 text-xs font-semibold text-muted-foreground">Items (legado)</p>
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">Items (piezas)</p>
                   <Table>
                     <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cant.</TableHead><TableHead>Precio</TableHead><TableHead>Subtotal</TableHead></TableRow></TableHeader>
                     <TableBody>
