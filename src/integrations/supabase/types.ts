@@ -261,24 +261,27 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          product_id: string
+          product_id: string | null
           quantity: number
+          raw_material_id: string | null
           total_cost: number
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          product_id: string
+          product_id?: string | null
           quantity: number
+          raw_material_id?: string | null
           total_cost?: number
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          product_id?: string
+          product_id?: string | null
           quantity?: number
+          raw_material_id?: string | null
           total_cost?: number
           user_id?: string
         }
@@ -381,27 +384,39 @@ export type Database = {
         Row: {
           cost_per_unit: number
           created_at: string
+          formula_id: string | null
           id: string
+          is_producible: boolean
+          is_sellable: boolean
           name: string
           reorder_point: number
+          sale_price: number
           stock: number
           unit: string
         }
         Insert: {
           cost_per_unit?: number
           created_at?: string
+          formula_id?: string | null
           id?: string
+          is_producible?: boolean
+          is_sellable?: boolean
           name: string
           reorder_point?: number
+          sale_price?: number
           stock?: number
           unit: string
         }
         Update: {
           cost_per_unit?: number
           created_at?: string
+          formula_id?: string | null
           id?: string
+          is_producible?: boolean
+          is_sellable?: boolean
           name?: string
           reorder_point?: number
+          sale_price?: number
           stock?: number
           unit?: string
         }
@@ -482,27 +497,33 @@ export type Database = {
       sale_items: {
         Row: {
           id: string
-          product_id: string
+          item_type: string
+          product_id: string | null
           product_name: string
           quantity: number
+          raw_material_id: string | null
           sale_id: string
           subtotal: number
           unit_price: number
         }
         Insert: {
           id?: string
-          product_id: string
+          item_type?: string
+          product_id?: string | null
           product_name: string
           quantity: number
+          raw_material_id?: string | null
           sale_id: string
           subtotal: number
           unit_price: number
         }
         Update: {
           id?: string
-          product_id?: string
+          item_type?: string
+          product_id?: string | null
           product_name?: string
           quantity?: number
+          raw_material_id?: string | null
           sale_id?: string
           subtotal?: number
           unit_price?: number
@@ -660,6 +681,21 @@ export type Database = {
           _container_liters?: number
           _product_id: string
           _quantity: number
+        }
+        Returns: string
+      }
+      process_raw_material_production: {
+        Args: { _quantity: number; _raw_material_id: string }
+        Returns: string
+      }
+      process_raw_material_sale: {
+        Args: {
+          _customer_id: string
+          _discount: number
+          _items: Json
+          _payment_method: string
+          _subtotal: number
+          _total: number
         }
         Returns: string
       }

@@ -34,11 +34,17 @@ function TicketsPage() {
     enabled: !!view, queryKey: ["sale-detail-mixed", view],
     queryFn: async () => {
       const [legacy, liquid] = await Promise.all([
-        supabase.from("sale_items").select("*").eq("sale_id", view!),
+        supabase.from("sale_items").select("*, raw_materials(name,unit)").eq("sale_id", view!),
         supabase.from("sale_container_items").select("*, products(name)").eq("sale_id", view!),
       ]);
+      const all = legacy.data ?? [];
       const sale = sales.find((s: any) => s.id === view);
-      return { sale, legacy: legacy.data ?? [], liquid: liquid.data ?? [] };
+      return {
+        sale,
+        legacy: all.filter((i: any) => i.item_type !== "raw_material"),
+        rawMaterials: all.filter((i: any) => i.item_type === "raw_material"),
+        liquid: liquid.data ?? [],
+      };
     },
   });
 
@@ -118,9 +124,27 @@ function TicketsPage() {
                   </Table>
                 </div>
               )}
+              {detail.rawMaterials.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">Materia prima vendida</p>
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Materia prima</TableHead><TableHead>Cantidad</TableHead><TableHead>Precio</TableHead><TableHead>Subtotal</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {detail.rawMaterials.map((i: any) => (
+                        <TableRow key={i.id}>
+                          <TableCell>{i.product_name}</TableCell>
+                          <TableCell>{Number(i.quantity)} {i.raw_materials?.unit ?? ""}</TableCell>
+                          <TableCell>${Number(i.unit_price).toFixed(2)}</TableCell>
+                          <TableCell>${Number(i.subtotal).toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
               {detail.legacy.length > 0 && (
                 <div>
-                  <p className="mb-1 text-xs font-semibold text-muted-foreground">Items (legado)</p>
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">Items (piezas)</p>
                   <Table>
                     <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cant.</TableHead><TableHead>Precio</TableHead><TableHead>Subtotal</TableHead></TableRow></TableHeader>
                     <TableBody>
