@@ -34,11 +34,17 @@ function TicketsPage() {
     enabled: !!view, queryKey: ["sale-detail-mixed", view],
     queryFn: async () => {
       const [legacy, liquid] = await Promise.all([
-        supabase.from("sale_items").select("*").eq("sale_id", view!),
+        supabase.from("sale_items").select("*, raw_materials(name,unit)").eq("sale_id", view!),
         supabase.from("sale_container_items").select("*, products(name)").eq("sale_id", view!),
       ]);
+      const all = legacy.data ?? [];
       const sale = sales.find((s: any) => s.id === view);
-      return { sale, legacy: legacy.data ?? [], liquid: liquid.data ?? [] };
+      return {
+        sale,
+        legacy: all.filter((i: any) => i.item_type !== "raw_material"),
+        rawMaterials: all.filter((i: any) => i.item_type === "raw_material"),
+        liquid: liquid.data ?? [],
+      };
     },
   });
 
