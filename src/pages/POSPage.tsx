@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Trash2, Search, Printer, Receipt, Droplet, Plus, Package, Minus } from "lucide-react";
+import { Trash2, Search, Printer, Receipt, Droplet, Plus, Package, Minus, Beaker } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 type StockRow = { product_id: string; product_name: string; total_liters_available: number };
 type Presentation = { id: string; product_id: string; label: string; liters: number; price: number; is_bulk: boolean; active: boolean };
 type PieceProduct = { id: string; name: string; price: number; stock: number };
+type SellableRm = { id: string; name: string; unit: string; stock: number; sale_price: number };
 
 type LiquidCartItem = {
   kind: "liquid";
@@ -41,7 +42,16 @@ type PieceCartItem = {
   quantity: number;
   subtotal: number;
 };
-type CartItem = LiquidCartItem | PieceCartItem;
+type RmCartItem = {
+  kind: "raw_material";
+  raw_material_id: string;
+  product_name: string;
+  unit: string;
+  unit_price: number;
+  quantity: number;
+  subtotal: number;
+};
+type CartItem = LiquidCartItem | PieceCartItem | RmCartItem;
 
 const deriveDispatch = (liters_per_unit: number, is_bulk: boolean): LiquidCartItem["dispatch_type"] => {
   if (is_bulk) return "granel";
@@ -55,13 +65,13 @@ const deriveDispatch = (liters_per_unit: number, is_bulk: boolean): LiquidCartIt
 function POS() {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [tab, setTab] = useState<"liquidos" | "piezas">("liquidos");
+  const [tab, setTab] = useState<"liquidos" | "piezas" | "materia">("liquidos");
   const [search, setSearch] = useState("");
   const [selProductId, setSelProductId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<string>("none");
   const [payment, setPayment] = useState("efectivo");
-  const [lastSale, setLastSale] = useState<{ id: string; kind: "liquid" | "piece" } | null>(null);
+  const [lastSale, setLastSale] = useState<{ id: string; kind: "liquid" | "piece" | "raw_material" } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const { data: stock = [] } = useQuery({
@@ -71,6 +81,10 @@ function POS() {
   const { data: pieces = [] } = useQuery({
     queryKey: ["pos-pieces"],
     queryFn: async () => ((await supabase.from("products").select("id,name,price,stock").eq("unit_type", "pieza").order("name")).data ?? []) as PieceProduct[],
+  });
+  const { data: sellableRms = [] } = useQuery({
+    queryKey: ["pos-rms"],
+    queryFn: async () => ((await supabase.from("raw_materials").select("id,name,unit,stock,sale_price").eq("is_sellable", true).order("name")).data ?? []) as SellableRm[],
   });
   const { data: presentations = [] } = useQuery({
     enabled: !!selProductId && tab === "liquidos",
@@ -84,6 +98,7 @@ function POS() {
 
   const filteredStock = useMemo(() => stock.filter((p) => p.product_name.toLowerCase().includes(search.toLowerCase())), [stock, search]);
   const filteredPieces = useMemo(() => pieces.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())), [pieces, search]);
+  const filteredRms = useMemo(() => sellableRms.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())), [sellableRms, search]);
   const selectedStock = stock.find((s) => s.product_id === selProductId);
 
   const addPresentation = (pres: Presentation, qtyOrLiters: number) => {
@@ -104,7 +119,7 @@ function POS() {
     }
     const usedLiters = cart.filter((c): c is LiquidCartItem => c.kind === "liquid" && c.product_id === pres.product_id).reduce((s, c) => s + c.total_liters, 0);
     if (usedLiters + total_liters > stockAvail) {
-      toast.error(`Stock insuficiente: ${stockAvail.toFixed(1)}L disponibles, ${(usedLiters + total_liters).toFixed(1)}L solicitados`);
+      toast.error(`Stock insuficiente: ${stockAvail.toFixed(1)}L disponibles`);
       return;
     }
     setCart((c) => [...c, {
@@ -141,6 +156,24 @@ function POS() {
     });
   };
 
+  const addRm = (r: SellableRm, qty: number) => {
+    if (qty <= 0) return;
+    const stockN = Number(r.stock);
+    const used = cart.filter((c): c is RmCartItem => c.kind === "raw_material" && c.raw_material_id === r.id).reduce((s, c) => s + c.quantity, 0);
+    if (used + qty > stockN) { toast.error(`Stock insuficiente: ${stockN} ${r.unit}`); return; }
+    setCart((c) => {
+      const idx = c.findIndex((x) => x.kind === "raw_material" && x.raw_material_id === r.id);
+      if (idx >= 0) {
+        const next = [...c];
+        const it = next[idx] as RmCartItem;
+        const newQty = it.quantity + qty;
+        next[idx] = { ...it, quantity: newQty, subtotal: newQty * it.unit_price };
+        return next;
+      }
+      return [...c, { kind: "raw_material", raw_material_id: r.id, product_name: r.name, unit: r.unit, unit_price: Number(r.sale_price), quantity: qty, subtotal: qty * Number(r.sale_price) }];
+    });
+  };
+
   const updatePieceQty = (idx: number, delta: number) => {
     setCart((c) => {
       const it = c[idx];
@@ -162,16 +195,17 @@ function POS() {
     return { subtotal, discount: 0, total: subtotal };
   }, [cart]);
 
-  const hasLiquid = cart.some((c) => c.kind === "liquid");
-  const hasPiece = cart.some((c) => c.kind === "piece");
+  const kinds = new Set(cart.map((c) => c.kind));
+  const mixed = kinds.size > 1;
 
   const checkout = async () => {
     if (cart.length === 0) { toast.error("Carrito vacío"); return; }
     if (!user) return;
-    if (hasLiquid && hasPiece) { toast.error("Procesa por separado: líquidos y piezas en ventas distintas"); return; }
+    if (mixed) { toast.error("Procesa cada tipo en ventas separadas"); return; }
     setSubmitting(true);
+    const onlyKind = [...kinds][0];
 
-    if (hasLiquid) {
+    if (onlyKind === "liquid") {
       const items = cart.filter((c): c is LiquidCartItem => c.kind === "liquid").map((i) => ({
         product_id: i.product_id, presentation_id: i.presentation_id, liters: i.total_liters,
         unit_price: i.unit_price, subtotal: i.subtotal, dispatch_type: i.dispatch_type,
@@ -183,9 +217,8 @@ function POS() {
       } as any);
       setSubmitting(false);
       if (error) { toast.error(error.message); return; }
-      toast.success("Venta registrada");
       setLastSale({ id: data as string, kind: "liquid" });
-    } else {
+    } else if (onlyKind === "piece") {
       const items = cart.filter((c): c is PieceCartItem => c.kind === "piece").map((i) => ({
         product_id: i.product_id, product_name: i.product_name, quantity: i.quantity,
         unit_price: i.unit_price, subtotal: i.subtotal,
@@ -197,19 +230,35 @@ function POS() {
       } as any);
       setSubmitting(false);
       if (error) { toast.error(error.message); return; }
-      toast.success("Venta registrada");
       setLastSale({ id: data as string, kind: "piece" });
+    } else {
+      const items = cart.filter((c): c is RmCartItem => c.kind === "raw_material").map((i) => ({
+        raw_material_id: i.raw_material_id, product_name: i.product_name, quantity: i.quantity,
+        unit_price: i.unit_price, subtotal: i.subtotal,
+      }));
+      const { data, error } = await supabase.rpc("process_raw_material_sale" as any, {
+        _customer_id: customerId === "none" ? null : customerId,
+        _payment_method: payment, _subtotal: totals.subtotal, _discount: totals.discount, _total: totals.total,
+        _items: items as any,
+      } as any);
+      setSubmitting(false);
+      if (error) { toast.error(error.message); return; }
+      setLastSale({ id: data as string, kind: "raw_material" });
     }
+
+    toast.success("Venta registrada");
     setCart([]); setCustomerId("none"); setSelProductId(null);
     qc.invalidateQueries({ queryKey: ["pos-stock"] });
     qc.invalidateQueries({ queryKey: ["pos-pieces"] });
+    qc.invalidateQueries({ queryKey: ["pos-rms"] });
+    qc.invalidateQueries({ queryKey: ["rms-full"] });
     qc.invalidateQueries({ queryKey: ["product-stock-liters"] });
     qc.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
   return (
     <div>
-      <PageHeader title="Punto de Venta" subtitle="Filtra líquidos (FIFO) o piezas y registra la venta" />
+      <PageHeader title="Punto de Venta" subtitle="Líquidos (FIFO), piezas o materia prima" />
       <div className="grid gap-4 lg:grid-cols-[1fr_440px]">
         <div>
           <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelProductId(null); }}>
@@ -217,10 +266,11 @@ function POS() {
               <TabsList>
                 <TabsTrigger value="liquidos"><Droplet className="mr-2 h-4 w-4" />Líquidos</TabsTrigger>
                 <TabsTrigger value="piezas"><Package className="mr-2 h-4 w-4" />Piezas</TabsTrigger>
+                <TabsTrigger value="materia"><Beaker className="mr-2 h-4 w-4" />Materia prima</TabsTrigger>
               </TabsList>
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input className="pl-9" placeholder="Buscar producto..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input className="pl-9" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
             </div>
 
@@ -257,7 +307,7 @@ function POS() {
                     <CardContent className="p-4">
                       <h3 className="mb-3 font-semibold">Presentaciones — {selectedStock?.product_name}</h3>
                       {presentations.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Este producto no tiene presentaciones activas. Configúralas en Presentaciones.</p>
+                        <p className="text-sm text-muted-foreground">Sin presentaciones activas. Configúralas en Presentaciones.</p>
                       ) : (
                         <div className="grid gap-2 sm:grid-cols-2">
                           {presentations.map((pres) => <PresentationCard key={pres.id} pres={pres} onAdd={(q) => addPresentation(pres, q)} />)}
@@ -293,6 +343,15 @@ function POS() {
                 </div>
               </ScrollArea>
             </TabsContent>
+
+            <TabsContent value="materia">
+              <ScrollArea className="h-[calc(100vh-280px)] pr-3">
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-3">
+                  {filteredRms.map((r) => <RmCard key={r.id} rm={r} onAdd={(q) => addRm(r, q)} />)}
+                  {filteredRms.length === 0 && <p className="col-span-full text-sm text-muted-foreground">No hay materia prima marcada como vendible. Actívalo en el módulo de Materia prima.</p>}
+                </div>
+              </ScrollArea>
+            </TabsContent>
           </Tabs>
         </div>
 
@@ -317,13 +376,13 @@ function POS() {
               </Select>
             </div>
 
-            {hasLiquid && hasPiece && (
-              <p className="mt-2 rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">Procesa líquidos y piezas en ventas separadas.</p>
+            {mixed && (
+              <p className="mt-2 rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">Procesa cada tipo (líquido, pieza, materia prima) en ventas separadas.</p>
             )}
 
             <ScrollArea className="-mx-4 my-3 flex-1 px-4">
               {cart.length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">Selecciona productos para agregar</p>
+                <p className="py-10 text-center text-sm text-muted-foreground">Selecciona items para agregar</p>
               ) : (
                 <ul className="space-y-2">
                   {cart.map((i, idx) => (
@@ -335,13 +394,15 @@ function POS() {
                             <p className="text-xs text-muted-foreground">
                               {i.is_bulk ? `${i.total_liters.toFixed(2)} L granel @ $${i.unit_price}/L` : `${i.quantity} × ${i.presentation_label} (${i.total_liters} L)`}
                             </p>
-                          ) : (
+                          ) : i.kind === "piece" ? (
                             <div className="mt-1 flex items-center gap-1">
                               <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updatePieceQty(idx, -1)}><Minus className="h-3 w-3" /></Button>
                               <span className="w-8 text-center text-xs font-medium">{i.quantity}</span>
                               <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => updatePieceQty(idx, 1)}><Plus className="h-3 w-3" /></Button>
                               <span className="ml-2 text-xs text-muted-foreground">@ ${i.unit_price.toFixed(2)}</span>
                             </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">{i.quantity} {i.unit} @ ${i.unit_price.toFixed(2)}/{i.unit}</p>
                           )}
                         </div>
                         <button onClick={() => remove(idx)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
@@ -357,7 +418,7 @@ function POS() {
               <div className="flex justify-between text-lg font-bold"><span>Total</span><span>${totals.total.toFixed(2)}</span></div>
             </div>
 
-            <Button onClick={checkout} disabled={submitting || cart.length === 0 || (hasLiquid && hasPiece)}
+            <Button onClick={checkout} disabled={submitting || cart.length === 0 || mixed}
               className="mt-3 h-12 w-full bg-warning text-warning-foreground hover:bg-warning/90 text-base font-semibold">
               <Receipt className="mr-2 h-5 w-5" /> Registrar venta
             </Button>
@@ -394,7 +455,29 @@ function PresentationCard({ pres, onAdd }: { pres: Presentation; onAdd: (q: numb
   );
 }
 
-function TicketDialog({ sale, onClose }: { sale: { id: string; kind: "liquid" | "piece" } | null; onClose: () => void }) {
+function RmCard({ rm, onAdd }: { rm: SellableRm; onAdd: (q: number) => void }) {
+  const [value, setValue] = useState<number>(1);
+  const stockN = Number(rm.stock);
+  const noStock = stockN === 0;
+  return (
+    <Card className={cn("transition", noStock && "opacity-60")}>
+      <CardContent className="p-3">
+        <h3 className="text-sm font-semibold leading-tight">{rm.name}</h3>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-base font-bold">${Number(rm.sale_price).toFixed(2)}<span className="text-xs text-muted-foreground">/{rm.unit}</span></span>
+          {noStock ? <Badge variant="destructive" className="text-[10px]">Sin stock</Badge>
+            : <Badge variant="outline" className="text-[10px]">{stockN} {rm.unit}</Badge>}
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <Input type="number" min={0.01} step="0.01" value={value} onChange={(e) => setValue(parseFloat(e.target.value) || 0)} className="h-8" disabled={noStock} />
+          <Button size="sm" disabled={noStock} onClick={() => value > 0 && onAdd(value)}><Plus className="h-4 w-4" /></Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TicketDialog({ sale, onClose }: { sale: { id: string; kind: "liquid" | "piece" | "raw_material" } | null; onClose: () => void }) {
   const { data } = useQuery({
     enabled: !!sale,
     queryKey: ["sale-ticket", sale?.id, sale?.kind],
@@ -405,10 +488,17 @@ function TicketDialog({ sale, onClose }: { sale: { id: string; kind: "liquid" | 
       ]);
       if (sale!.kind === "liquid") {
         const items = await supabase.from("sale_container_items").select("*, products(name)").eq("sale_id", sale!.id);
-        return { sale: saleRes.data, liquidItems: items.data ?? [], pieceItems: [], settings: settings.data };
+        return { sale: saleRes.data, liquidItems: items.data ?? [], pieceItems: [] as any[], rmItems: [] as any[], settings: settings.data };
       } else {
-        const items = await supabase.from("sale_items").select("*").eq("sale_id", sale!.id);
-        return { sale: saleRes.data, liquidItems: [], pieceItems: items.data ?? [], settings: settings.data };
+        const items = await supabase.from("sale_items").select("*, raw_materials(name,unit)").eq("sale_id", sale!.id);
+        const all = items.data ?? [];
+        return {
+          sale: saleRes.data,
+          liquidItems: [] as any[],
+          pieceItems: all.filter((i: any) => i.item_type !== "raw_material"),
+          rmItems: all.filter((i: any) => i.item_type === "raw_material"),
+          settings: settings.data,
+        };
       }
     },
   });
@@ -443,16 +533,13 @@ function TicketDialog({ sale, onClose }: { sale: { id: string; kind: "liquid" | 
             <table className="w-full border-t border-dashed pt-2">
               <tbody>
                 {grouped.map((g, i) => (
-                  <tr key={i}>
-                    <td>{g.name} · {g.type} ({g.liters.toFixed(2)}L)</td>
-                    <td className="text-right">${g.subtotal.toFixed(2)}</td>
-                  </tr>
+                  <tr key={i}><td>{g.name} · {g.type} ({g.liters.toFixed(2)}L)</td><td className="text-right">${g.subtotal.toFixed(2)}</td></tr>
                 ))}
                 {data.pieceItems.map((i: any) => (
-                  <tr key={i.id}>
-                    <td>{i.product_name} × {Number(i.quantity)}</td>
-                    <td className="text-right">${Number(i.subtotal).toFixed(2)}</td>
-                  </tr>
+                  <tr key={i.id}><td>{i.product_name} × {Number(i.quantity)}</td><td className="text-right">${Number(i.subtotal).toFixed(2)}</td></tr>
+                ))}
+                {data.rmItems.map((i: any) => (
+                  <tr key={i.id}><td>MP · {i.product_name} {Number(i.quantity)} {i.raw_materials?.unit ?? ""}</td><td className="text-right">${Number(i.subtotal).toFixed(2)}</td></tr>
                 ))}
               </tbody>
             </table>
