@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Trash2, Search, Printer, Receipt, Droplet, Plus, Package, Minus, Beaker } from "lucide-react";
+import { Trash2, Search, Printer, Receipt, Droplet, Plus, Package, Minus, Beaker, Gift } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -65,7 +66,9 @@ const deriveDispatch = (liters_per_unit: number, is_bulk: boolean): LiquidCartIt
 function POS() {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [tab, setTab] = useState<"liquidos" | "piezas" | "materia">("liquidos");
+  const [tab, setTab] = useState<"liquidos" | "piezas" | "materia" | "promos">("liquidos");
+  const [promoSale, setPromoSale] = useState<any | null>(null);
+  const [promoQty, setPromoQty] = useState(1);
   const [search, setSearch] = useState("");
   const [selProductId, setSelProductId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -94,6 +97,20 @@ function POS() {
   const { data: customers = [] } = useQuery({
     queryKey: ["customers-pos"],
     queryFn: async () => (await supabase.from("customers").select("id,name").order("name")).data ?? [],
+  });
+  const { data: promos = [] } = useQuery({
+    queryKey: ["pos-promotions"],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from("promotions" as any)
+        .select("*, promotion_items(*, products(name,unit_type,stock))")
+        .eq("active", true)
+        .order("name");
+      return (data ?? []).filter((p: any) =>
+        (!p.start_date || p.start_date <= today) && (!p.end_date || p.end_date >= today)
+      );
+    },
   });
 
   const filteredStock = useMemo(() => stock.filter((p) => p.product_name.toLowerCase().includes(search.toLowerCase())), [stock, search]);
@@ -267,6 +284,7 @@ function POS() {
                 <TabsTrigger value="liquidos"><Droplet className="mr-2 h-4 w-4" />Líquidos</TabsTrigger>
                 <TabsTrigger value="piezas"><Package className="mr-2 h-4 w-4" />Piezas</TabsTrigger>
                 <TabsTrigger value="materia"><Beaker className="mr-2 h-4 w-4" />Materia prima</TabsTrigger>
+                <TabsTrigger value="promos"><Gift className="mr-2 h-4 w-4" />Promociones</TabsTrigger>
               </TabsList>
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -352,6 +370,31 @@ function POS() {
                 </div>
               </ScrollArea>
             </TabsContent>
+
+            <TabsContent value="promos">
+              <ScrollArea className="h-[calc(100vh-280px)] pr-3">
+                <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                  {promos.map((p: any) => (
+                    <Card key={p.id} className="cursor-pointer border-warning/40 transition hover:border-warning"
+                      onClick={() => { setPromoSale(p); setPromoQty(1); }}>
+                      <CardContent className="p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold"><Gift className="h-4 w-4 text-warning" />{p.name}</h3>
+                          <span className="text-lg font-bold">${Number(p.price).toFixed(2)}</span>
+                        </div>
+                        <ul className="space-y-0.5 text-xs text-muted-foreground">
+                          {(p.promotion_items ?? []).map((i: any) => (
+                            <li key={i.id}>• {Number(i.quantity)} {i.unit_type === "litro" ? "L" : "pz"} de {i.products?.name}</li>
+                          ))}
+                        </ul>
+                        {p.end_date && <p className="mt-2 text-[10px] text-muted-foreground">Vigencia hasta {new Date(p.end_date).toLocaleDateString()}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {promos.length === 0 && <p className="col-span-full text-sm text-muted-foreground">No hay promociones activas.</p>}
+                </div>
+              </ScrollArea>
+            </TabsContent>
           </Tabs>
         </div>
 
@@ -427,6 +470,70 @@ function POS() {
       </div>
 
       <TicketDialog sale={lastSale} onClose={() => setLastSale(null)} />
+
+      <Dialog open={!!promoSale} onOpenChange={(o) => !o && setPromoSale(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Vender promoción</DialogTitle></DialogHeader>
+          {promoSale && (
+            <div className="space-y-3">
+              <div className="rounded-md bg-muted p-3">
+                <p className="font-semibold flex items-center gap-2"><Gift className="h-4 w-4 text-warning" />{promoSale.name}</p>
+                <p className="text-sm">Precio: <span className="font-bold">${Number(promoSale.price).toFixed(2)}</span></p>
+                <ul className="mt-2 text-xs text-muted-foreground">
+                  {(promoSale.promotion_items ?? []).map((i: any) => (
+                    <li key={i.id}>• {Number(i.quantity)} {i.unit_type === "litro" ? "L" : "pz"} de {i.products?.name}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Cantidad de paquetes</Label>
+                  <Input type="number" min={1} value={promoQty} onChange={(e) => setPromoQty(Math.max(1, parseInt(e.target.value) || 1))} />
+                </div>
+                <div><Label>Pago</Label>
+                  <Select value={payment} onValueChange={setPayment}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="efectivo">Efectivo</SelectItem>
+                      <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                      <SelectItem value="transferencia">Transferencia</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Cliente (opcional)</Label>
+                <Select value={customerId} onValueChange={setCustomerId}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin cliente</SelectItem>
+                    {customers.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="text-right text-lg font-bold">Total: ${(Number(promoSale.price) * promoQty).toFixed(2)}</div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromoSale(null)}>Cancelar</Button>
+            <Button onClick={async () => {
+              const { data, error } = await supabase.rpc("process_promotion_sale" as any, {
+                _promotion_id: promoSale.id,
+                _customer_id: customerId === "none" ? null : customerId,
+                _payment_method: payment,
+                _quantity: promoQty,
+              } as any);
+              if (error) { toast.error(error.message); return; }
+              toast.success("Promoción vendida");
+              setPromoSale(null); setCustomerId("none");
+              setLastSale({ id: data as string, kind: "piece" });
+              qc.invalidateQueries({ queryKey: ["pos-stock"] });
+              qc.invalidateQueries({ queryKey: ["pos-pieces"] });
+              qc.invalidateQueries({ queryKey: ["product-stock-liters"] });
+              qc.invalidateQueries({ queryKey: ["dashboard"] });
+            }}>Registrar venta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
