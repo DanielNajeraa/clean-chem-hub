@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingCart, Package, FlaskConical, Beaker, Droplet,
-  Factory, Users, Receipt, Settings, LogOut, UserCog, Sparkles, Tags,
+  Factory, Users, Receipt, LogOut, UserCog, Sparkles, Tags, Gift,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
