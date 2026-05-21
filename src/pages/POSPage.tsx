@@ -98,6 +98,20 @@ function POS() {
     queryKey: ["customers-pos"],
     queryFn: async () => (await supabase.from("customers").select("id,name").order("name")).data ?? [],
   });
+  const { data: promos = [] } = useQuery({
+    queryKey: ["pos-promotions"],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from("promotions" as any)
+        .select("*, promotion_items(*, products(name,unit_type,stock))")
+        .eq("active", true)
+        .order("name");
+      return (data ?? []).filter((p: any) =>
+        (!p.start_date || p.start_date <= today) && (!p.end_date || p.end_date >= today)
+      );
+    },
+  });
 
   const filteredStock = useMemo(() => stock.filter((p) => p.product_name.toLowerCase().includes(search.toLowerCase())), [stock, search]);
   const filteredPieces = useMemo(() => pieces.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())), [pieces, search]);
