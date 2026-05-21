@@ -89,7 +89,24 @@ function CustomersPage() {
                   <SelectContent><SelectItem value="minorista">Minorista</SelectItem><SelectItem value="mayorista">Mayorista</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div><Label>Dirección</Label><Input value={editing.address ?? ""} onChange={(e) => setEditing({ ...editing, address: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Ciudad / Localidad</Label>
+                  <Select value={editing.city ?? ""} onValueChange={(v) => setEditing({ ...editing, city: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona ciudad" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Los Mochis">Los Mochis</SelectItem>
+                      <SelectItem value="Guasave">Guasave</SelectItem>
+                      <SelectItem value="El Fuerte">El Fuerte</SelectItem>
+                      <SelectItem value="Ahome">Ahome</SelectItem>
+                      <SelectItem value="Choix">Choix</SelectItem>
+                      <SelectItem value="Sinaloa de Leyva">Sinaloa de Leyva</SelectItem>
+                      <SelectItem value="Culiacán">Culiacán</SelectItem>
+                      <SelectItem value="Otra">Otra</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Dirección</Label><Input value={editing.address ?? ""} onChange={(e) => setEditing({ ...editing, address: e.target.value })} placeholder="Calle, número, colonia" /></div>
+              </div>
             </div>
           )}
           <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button><Button onClick={save}>Guardar</Button></DialogFooter>
