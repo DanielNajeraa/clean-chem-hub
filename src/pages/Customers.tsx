@@ -49,12 +49,13 @@ function CustomersPage() {
 
       <div className="rounded-md border bg-card">
         <Table>
-          <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Tipo</TableHead><TableHead>Teléfono</TableHead><TableHead>Email</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Tipo</TableHead><TableHead>Ciudad</TableHead><TableHead>Teléfono</TableHead><TableHead>Email</TableHead><TableHead></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map((c: any) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell><Badge variant={c.type === "mayorista" ? "default" : "secondary"}>{c.type}</Badge></TableCell>
+                <TableCell>{c.city ? <Badge variant="outline">{c.city}</Badge> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
                 <TableCell>{c.phone}</TableCell>
                 <TableCell>{c.email}</TableCell>
                 <TableCell className="text-right">
