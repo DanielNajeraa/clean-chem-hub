@@ -370,6 +370,31 @@ function POS() {
                 </div>
               </ScrollArea>
             </TabsContent>
+
+            <TabsContent value="promos">
+              <ScrollArea className="h-[calc(100vh-280px)] pr-3">
+                <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                  {promos.map((p: any) => (
+                    <Card key={p.id} className="cursor-pointer border-warning/40 transition hover:border-warning"
+                      onClick={() => { setPromoSale(p); setPromoQty(1); }}>
+                      <CardContent className="p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold"><Gift className="h-4 w-4 text-warning" />{p.name}</h3>
+                          <span className="text-lg font-bold">${Number(p.price).toFixed(2)}</span>
+                        </div>
+                        <ul className="space-y-0.5 text-xs text-muted-foreground">
+                          {(p.promotion_items ?? []).map((i: any) => (
+                            <li key={i.id}>• {Number(i.quantity)} {i.unit_type === "litro" ? "L" : "pz"} de {i.products?.name}</li>
+                          ))}
+                        </ul>
+                        {p.end_date && <p className="mt-2 text-[10px] text-muted-foreground">Vigencia hasta {new Date(p.end_date).toLocaleDateString()}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {promos.length === 0 && <p className="col-span-full text-sm text-muted-foreground">No hay promociones activas.</p>}
+                </div>
+              </ScrollArea>
+            </TabsContent>
           </Tabs>
         </div>
 
