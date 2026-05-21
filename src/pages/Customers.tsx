@@ -40,7 +40,7 @@ function CustomersPage() {
   return (
     <div>
       <PageHeader title="Clientes" subtitle="Directorio y tipos"
-        actions={<Button onClick={() => { setEditing({ name: "", phone: "", email: "", type: "minorista", address: "" }); setOpen(true); }} className="bg-warning text-warning-foreground hover:bg-warning/90"><Plus className="mr-2 h-4 w-4" />Nuevo</Button>} />
+        actions={<Button onClick={() => { setEditing({ name: "", phone: "", email: "", type: "minorista", city: "", address: "" }); setOpen(true); }} className="bg-warning text-warning-foreground hover:bg-warning/90"><Plus className="mr-2 h-4 w-4" />Nuevo</Button>} />
 
       <div className="mb-3 relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
