@@ -470,6 +470,70 @@ function POS() {
       </div>
 
       <TicketDialog sale={lastSale} onClose={() => setLastSale(null)} />
+
+      <Dialog open={!!promoSale} onOpenChange={(o) => !o && setPromoSale(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Vender promoción</DialogTitle></DialogHeader>
+          {promoSale && (
+            <div className="space-y-3">
+              <div className="rounded-md bg-muted p-3">
+                <p className="font-semibold flex items-center gap-2"><Gift className="h-4 w-4 text-warning" />{promoSale.name}</p>
+                <p className="text-sm">Precio: <span className="font-bold">${Number(promoSale.price).toFixed(2)}</span></p>
+                <ul className="mt-2 text-xs text-muted-foreground">
+                  {(promoSale.promotion_items ?? []).map((i: any) => (
+                    <li key={i.id}>• {Number(i.quantity)} {i.unit_type === "litro" ? "L" : "pz"} de {i.products?.name}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Cantidad de paquetes</Label>
+                  <Input type="number" min={1} value={promoQty} onChange={(e) => setPromoQty(Math.max(1, parseInt(e.target.value) || 1))} />
+                </div>
+                <div><Label>Pago</Label>
+                  <Select value={payment} onValueChange={setPayment}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="efectivo">Efectivo</SelectItem>
+                      <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                      <SelectItem value="transferencia">Transferencia</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Cliente (opcional)</Label>
+                <Select value={customerId} onValueChange={setCustomerId}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin cliente</SelectItem>
+                    {customers.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="text-right text-lg font-bold">Total: ${(Number(promoSale.price) * promoQty).toFixed(2)}</div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromoSale(null)}>Cancelar</Button>
+            <Button onClick={async () => {
+              const { data, error } = await supabase.rpc("process_promotion_sale" as any, {
+                _promotion_id: promoSale.id,
+                _customer_id: customerId === "none" ? null : customerId,
+                _payment_method: payment,
+                _quantity: promoQty,
+              } as any);
+              if (error) { toast.error(error.message); return; }
+              toast.success("Promoción vendida");
+              setPromoSale(null); setCustomerId("none");
+              setLastSale({ id: data as string, kind: "piece" });
+              qc.invalidateQueries({ queryKey: ["pos-stock"] });
+              qc.invalidateQueries({ queryKey: ["pos-pieces"] });
+              qc.invalidateQueries({ queryKey: ["product-stock-liters"] });
+              qc.invalidateQueries({ queryKey: ["dashboard"] });
+            }}>Registrar venta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
