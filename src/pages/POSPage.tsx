@@ -284,6 +284,7 @@ function POS() {
                 <TabsTrigger value="liquidos"><Droplet className="mr-2 h-4 w-4" />Líquidos</TabsTrigger>
                 <TabsTrigger value="piezas"><Package className="mr-2 h-4 w-4" />Piezas</TabsTrigger>
                 <TabsTrigger value="materia"><Beaker className="mr-2 h-4 w-4" />Materia prima</TabsTrigger>
+                <TabsTrigger value="promos"><Gift className="mr-2 h-4 w-4" />Promociones</TabsTrigger>
               </TabsList>
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
