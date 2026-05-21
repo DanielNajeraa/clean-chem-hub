@@ -66,7 +66,9 @@ const deriveDispatch = (liters_per_unit: number, is_bulk: boolean): LiquidCartIt
 function POS() {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [tab, setTab] = useState<"liquidos" | "piezas" | "materia">("liquidos");
+  const [tab, setTab] = useState<"liquidos" | "piezas" | "materia" | "promos">("liquidos");
+  const [promoSale, setPromoSale] = useState<any | null>(null);
+  const [promoQty, setPromoQty] = useState(1);
   const [search, setSearch] = useState("");
   const [selProductId, setSelProductId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
