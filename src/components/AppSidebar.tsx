@@ -24,7 +24,7 @@ const items: Item[] = [
   { title: "Clientes", url: "/customers", icon: Users, roles: ["admin","vendedor"] },
   { title: "Tickets", url: "/tickets", icon: Receipt, roles: ["admin","vendedor"] },
   { title: "Usuarios", url: "/users", icon: UserCog, roles: ["admin"] },
-  { title: "Configuración", url: "/settings", icon: Settings, roles: ["admin"] },
+  { title: "Promociones", url: "/promotions", icon: Gift, roles: ["admin","vendedor"] },
 ];
 
 export function AppSidebar() {
