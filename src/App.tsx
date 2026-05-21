@@ -47,6 +47,7 @@ export default function App() {
                 <Route path="/tickets" element={<Tickets />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/promotions" element={<Promotions />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
