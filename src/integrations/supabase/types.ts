@@ -32,6 +32,7 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          city: string | null
           created_at: string
           email: string | null
           id: string
@@ -41,6 +42,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -50,6 +52,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -380,6 +383,68 @@ export type Database = {
         }
         Relationships: []
       }
+      promotion_items: {
+        Row: {
+          id: string
+          product_id: string
+          promotion_id: string
+          quantity: number
+          unit_type: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          promotion_id: string
+          quantity?: number
+          unit_type?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          promotion_id?: string
+          quantity?: number
+          unit_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_items_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          active: boolean
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          price: number
+          start_date: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          price?: number
+          start_date?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          price?: number
+          start_date?: string | null
+        }
+        Relationships: []
+      }
       raw_materials: {
         Row: {
           cost_per_unit: number
@@ -559,6 +624,7 @@ export type Database = {
           discount: number
           id: string
           payment_method: string
+          promotion_id: string | null
           subtotal: number
           total: number
           user_id: string
@@ -569,6 +635,7 @@ export type Database = {
           discount?: number
           id?: string
           payment_method: string
+          promotion_id?: string | null
           subtotal: number
           total: number
           user_id: string
@@ -579,6 +646,7 @@ export type Database = {
           discount?: number
           id?: string
           payment_method?: string
+          promotion_id?: string | null
           subtotal?: number
           total?: number
           user_id?: string
@@ -681,6 +749,15 @@ export type Database = {
           _container_liters?: number
           _product_id: string
           _quantity: number
+        }
+        Returns: string
+      }
+      process_promotion_sale: {
+        Args: {
+          _customer_id: string
+          _payment_method: string
+          _promotion_id: string
+          _quantity?: number
         }
         Returns: string
       }
