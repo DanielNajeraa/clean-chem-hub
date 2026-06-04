@@ -47,20 +47,30 @@ function CustomersPage() {
       <PageHeader title="Clientes" subtitle="Directorio y tipos"
         actions={<Button onClick={() => { setEditing({ name: "", phone: "", email: "", type: "minorista", city: "", address: "" }); setOpen(true); }} className="bg-warning text-warning-foreground hover:bg-warning/90"><Plus className="mr-2 h-4 w-4" />Nuevo</Button>} />
 
-      <div className="mb-3 relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar..." value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-9" placeholder="Buscar..." value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <Select value={tagFilter} onValueChange={setTagFilter}>
+          <SelectTrigger className="w-56"><SelectValue placeholder="Filtrar por etiqueta" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las etiquetas</SelectItem>
+            {tags.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-md border bg-card">
         <Table>
-          <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Tipo</TableHead><TableHead>Ciudad</TableHead><TableHead>Teléfono</TableHead><TableHead>Email</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Tipo</TableHead><TableHead>Etiqueta</TableHead><TableHead>Dirección</TableHead><TableHead>Teléfono</TableHead><TableHead>Email</TableHead><TableHead></TableHead></TableRow></TableHeader>
           <TableBody>
             {filtered.map((c: any) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell><Badge variant={c.type === "mayorista" ? "default" : "secondary"}>{c.type}</Badge></TableCell>
-                <TableCell>{c.city ? <Badge variant="outline">{c.city}</Badge> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                <TableCell>{c.city ? <Badge variant="outline" className="bg-warning/10">📍 {c.city}</Badge> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{c.address || "—"}</TableCell>
                 <TableCell>{c.phone}</TableCell>
                 <TableCell>{c.email}</TableCell>
                 <TableCell className="text-right">
