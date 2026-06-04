@@ -417,6 +417,7 @@ function POS() {
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="tarjeta">Tarjeta</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="credito">Crédito (pagar después)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
