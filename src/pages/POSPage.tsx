@@ -277,6 +277,7 @@ function POS() {
   return (
     <div>
       <PageHeader title="Punto de Venta" subtitle="Líquidos (FIFO), piezas o materia prima" />
+      <CashRegister />
       <div className="grid gap-4 lg:grid-cols-[1fr_440px]">
         <div>
           <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelProductId(null); }}>
