@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      cash_movements: {
+        Row: {
+          amount: number
+          beneficiary_user_id: string | null
+          created_at: string
+          id: string
+          movement_type: string
+          reason: string | null
+          sale_id: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          beneficiary_user_id?: string | null
+          created_at?: string
+          id?: string
+          movement_type: string
+          reason?: string | null
+          sale_id?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          beneficiary_user_id?: string | null
+          created_at?: string
+          id?: string
+          movement_type?: string
+          reason?: string | null
+          sale_id?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_sessions: {
+        Row: {
+          closed_at: string | null
+          counted_cash: number | null
+          created_at: string
+          difference: number | null
+          expected_cash: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opening_amount: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          counted_cash?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_amount?: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          counted_cash?: number | null
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_amount?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           id: string
@@ -28,6 +114,51 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      credit_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          payment_method: string
+          sale_id: string
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          sale_id: string
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          sale_id?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_payments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
@@ -619,33 +750,42 @@ export type Database = {
       }
       sales: {
         Row: {
+          amount_paid: number
           created_at: string
           customer_id: string | null
           discount: number
           id: string
+          is_credit: boolean
           payment_method: string
+          payment_status: string
           promotion_id: string | null
           subtotal: number
           total: number
           user_id: string
         }
         Insert: {
+          amount_paid?: number
           created_at?: string
           customer_id?: string | null
           discount?: number
           id?: string
+          is_credit?: boolean
           payment_method: string
+          payment_status?: string
           promotion_id?: string | null
           subtotal: number
           total: number
           user_id: string
         }
         Update: {
+          amount_paid?: number
           created_at?: string
           customer_id?: string | null
           discount?: number
           id?: string
+          is_credit?: boolean
           payment_method?: string
+          payment_status?: string
           promotion_id?: string | null
           subtotal?: number
           total?: number
@@ -722,6 +862,14 @@ export type Database = {
       }
     }
     Functions: {
+      _finalize_sale_payment: {
+        Args: { _payment_method: string; _sale_id: string; _total: number }
+        Returns: undefined
+      }
+      close_cash_session: {
+        Args: { _counted: number; _notes?: string }
+        Returns: string
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -733,6 +881,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      open_cash_session: { Args: { _opening: number }; Returns: string }
       process_liquid_sale: {
         Args: {
           _customer_id: string
@@ -786,6 +935,19 @@ export type Database = {
           _total: number
         }
         Returns: string
+      }
+      register_cash_withdrawal: {
+        Args: {
+          _amount: number
+          _beneficiary_user_id?: string
+          _movement_type?: string
+          _reason: string
+        }
+        Returns: string
+      }
+      register_credit_payment: {
+        Args: { _amount: number; _payment_method?: string; _sale_id: string }
+        Returns: undefined
       }
     }
     Enums: {

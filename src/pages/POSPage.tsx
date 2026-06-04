@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { CashRegister } from "@/components/CashRegister";
 
 type StockRow = { product_id: string; product_name: string; total_liters_available: number };
 type Presentation = { id: string; product_id: string; label: string; liters: number; price: number; is_bulk: boolean; active: boolean };
@@ -276,6 +277,7 @@ function POS() {
   return (
     <div>
       <PageHeader title="Punto de Venta" subtitle="Líquidos (FIFO), piezas o materia prima" />
+      <CashRegister />
       <div className="grid gap-4 lg:grid-cols-[1fr_440px]">
         <div>
           <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelProductId(null); }}>
@@ -415,6 +417,7 @@ function POS() {
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="tarjeta">Tarjeta</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="credito">Crédito (pagar después)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -496,6 +499,7 @@ function POS() {
                       <SelectItem value="efectivo">Efectivo</SelectItem>
                       <SelectItem value="tarjeta">Tarjeta</SelectItem>
                       <SelectItem value="transferencia">Transferencia</SelectItem>
+                      <SelectItem value="credito">Crédito (pagar después)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

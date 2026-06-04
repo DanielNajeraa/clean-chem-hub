@@ -11,20 +11,20 @@ function Dashboard() {
     queryKey: ["dashboard"],
     queryFn: async () => {
       const today = new Date(); today.setHours(0,0,0,0);
-      const [products, sales, lowStock, orders, salesToday] = await Promise.all([
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      const [products, salesMonth, lowStock, orders, salesToday] = await Promise.all([
         supabase.from("products").select("*", { count: "exact", head: true }),
-        supabase.from("sales").select("total"),
+        supabase.from("sales").select("total").gte("created_at", monthStart.toISOString()),
         supabase.from("raw_materials").select("name,stock,reorder_point").lt("stock", 9999),
         supabase.from("production_orders").select("*", { count: "exact", head: true }),
         supabase.from("sales").select("total").gte("created_at", today.toISOString()),
       ]);
-      const totalSales = (sales.data ?? []).reduce((a, b) => a + Number(b.total), 0);
+      const monthTotal = (salesMonth.data ?? []).reduce((a, b) => a + Number(b.total), 0);
       const todaySales = (salesToday.data ?? []).reduce((a, b) => a + Number(b.total), 0);
       const low = (lowStock.data ?? []).filter((m) => Number(m.stock) <= Number(m.reorder_point));
       return {
         products: products.count ?? 0,
-        salesCount: sales.data?.length ?? 0,
-        totalSales,
+        monthTotal,
         todaySales,
         ordersCount: orders.count ?? 0,
         low,
@@ -38,7 +38,7 @@ function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Productos" value={data?.products ?? "—"} icon={<Package className="h-4 w-4" />} />
         <StatCard label="Ventas hoy" value={`$${(data?.todaySales ?? 0).toFixed(2)}`} accent="success" icon={<ShoppingCart className="h-4 w-4" />} />
-        <StatCard label="Total ventas" value={`$${(data?.totalSales ?? 0).toFixed(2)}`} icon={<ShoppingCart className="h-4 w-4" />} />
+        <StatCard label="Ventas mes actual" value={`$${(data?.monthTotal ?? 0).toFixed(2)}`} icon={<ShoppingCart className="h-4 w-4" />} />
         <StatCard label="Órdenes producción" value={data?.ordersCount ?? "—"} accent="warning" icon={<Factory className="h-4 w-4" />} />
       </div>
 
