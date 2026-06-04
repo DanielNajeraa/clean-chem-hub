@@ -105,9 +105,9 @@ function CustomersPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Ciudad / Localidad</Label>
+                <div><Label>Etiqueta / Localidad</Label>
                   <Select value={editing.city ?? ""} onValueChange={(v) => setEditing({ ...editing, city: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecciona ciudad" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecciona etiqueta" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Los Mochis">Los Mochis</SelectItem>
                       <SelectItem value="Guasave">Guasave</SelectItem>
