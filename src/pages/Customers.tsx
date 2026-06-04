@@ -17,6 +17,7 @@ function CustomersPage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [tagFilter, setTagFilter] = useState<string>("all");
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"], queryFn: async () => (await supabase.from("customers").select("*").order("name")).data ?? [],
