@@ -23,7 +23,11 @@ function CustomersPage() {
     queryKey: ["customers"], queryFn: async () => (await supabase.from("customers").select("*").order("name")).data ?? [],
   });
 
-  const filtered = customers.filter((c: any) => c.name.toLowerCase().includes(q.toLowerCase()));
+  const tags = Array.from(new Set(customers.map((c: any) => c.city).filter(Boolean))) as string[];
+  const filtered = customers.filter((c: any) =>
+    c.name.toLowerCase().includes(q.toLowerCase()) &&
+    (tagFilter === "all" || c.city === tagFilter)
+  );
 
   const save = async () => {
     if (editing.id) {
