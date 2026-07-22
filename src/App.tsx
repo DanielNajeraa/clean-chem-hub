@@ -20,6 +20,8 @@ import Tickets from "@/pages/Tickets";
 import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
 import Promotions from "@/pages/Promotions";
+import TestProducts from "@/pages/TestProducts";
+import TestPOSPage from "@/pages/TestPOSPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
