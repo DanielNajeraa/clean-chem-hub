@@ -828,6 +828,161 @@ export type Database = {
         }
         Relationships: []
       }
+      test_products: {
+        Row: {
+          active: boolean
+          category: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          name: string
+          price_1l: number | null
+          price_20l: number | null
+          price_5l: number | null
+          price_granel: number | null
+          price_pieza: number | null
+          stock: number
+          unit_type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          price_1l?: number | null
+          price_20l?: number | null
+          price_5l?: number | null
+          price_granel?: number | null
+          price_pieza?: number | null
+          stock?: number
+          unit_type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          price_1l?: number | null
+          price_20l?: number | null
+          price_5l?: number | null
+          price_granel?: number | null
+          price_pieza?: number | null
+          stock?: number
+          unit_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      test_sale_items: {
+        Row: {
+          created_at: string
+          id: string
+          presentation: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          presentation: string
+          product_id?: string | null
+          product_name: string
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          presentation?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          sale_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "test_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "test_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_sales: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          customer_id: string | null
+          discount: number
+          id: string
+          is_credit: boolean
+          payment_method: string
+          payment_status: string
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          customer_id?: string | null
+          discount?: number
+          id?: string
+          is_credit?: boolean
+          payment_method: string
+          payment_status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          customer_id?: string | null
+          discount?: number
+          id?: string
+          is_credit?: boolean
+          payment_method?: string
+          payment_status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
