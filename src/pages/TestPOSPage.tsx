@@ -138,7 +138,8 @@ export default function TestPOSPage() {
         : { name: p.name, needed, unit: p.unit_type === "litro" ? "L" : "pz" };
     }
     for (const pid of Object.keys(byProduct)) {
-      const p = products.find((x: any) => x.id === pid);
+      const p: any = products.find((x: any) => x.id === pid);
+      if (!p) continue;
       if (Number(p.stock) < byProduct[pid].needed) {
         return toast.error(`Stock insuficiente: ${byProduct[pid].name} (${Number(p.stock)}${byProduct[pid].unit} disp, ${byProduct[pid].needed}${byProduct[pid].unit} req)`);
       }
@@ -166,7 +167,8 @@ export default function TestPOSPage() {
 
     // Update stock
     for (const pid of Object.keys(byProduct)) {
-      const p = products.find((x: any) => x.id === pid);
+      const p: any = products.find((x: any) => x.id === pid);
+      if (!p) continue;
       await supabase.from("test_products").update({ stock: Number(p.stock) - byProduct[pid].needed }).eq("id", pid);
     }
 
