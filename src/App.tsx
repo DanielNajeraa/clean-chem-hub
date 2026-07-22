@@ -50,6 +50,8 @@ export default function App() {
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/promotions" element={<Promotions />} />
+                <Route path="/test-products" element={<TestProducts />} />
+                <Route path="/test-pos" element={<TestPOSPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

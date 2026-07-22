@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingCart, Package, FlaskConical, Beaker, Droplet,
-  Factory, Users, Receipt, LogOut, UserCog, Sparkles, Tags, Gift,
+  Factory, Users, Receipt, LogOut, UserCog, Sparkles, Tags, Gift, TestTube,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -25,6 +25,8 @@ const items: Item[] = [
   { title: "Tickets", url: "/tickets", icon: Receipt, roles: ["admin","vendedor"] },
   { title: "Usuarios", url: "/users", icon: UserCog, roles: ["admin"] },
   { title: "Promociones", url: "/promotions", icon: Gift, roles: ["admin","vendedor"] },
+  { title: "Productos (prueba)", url: "/test-products", icon: TestTube, roles: ["admin","vendedor"] },
+  { title: "POS (prueba)", url: "/test-pos", icon: TestTube, roles: ["admin","vendedor"] },
 ];
 
 export function AppSidebar() {
