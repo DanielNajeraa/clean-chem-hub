@@ -20,6 +20,8 @@ import Tickets from "@/pages/Tickets";
 import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
 import Promotions from "@/pages/Promotions";
+import TestProducts from "@/pages/TestProducts";
+import TestPOSPage from "@/pages/TestPOSPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
@@ -48,6 +50,8 @@ export default function App() {
                 <Route path="/users" element={<Users />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/promotions" element={<Promotions />} />
+                <Route path="/test-products" element={<TestProducts />} />
+                <Route path="/test-pos" element={<TestPOSPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
