@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Minus, Printer, Image as ImageIcon, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { useProductImageUrls } from "@/hooks/use-product-image-urls";
+import beeCleanLogo from "@/assets/bee-clean-logo.png.asset.json";
 
 type Preset = "granel" | "1L" | "5L" | "20L" | "pieza";
 
@@ -29,13 +31,6 @@ type CartLine = {
 
 const litersFor = (p: Preset) => p === "1L" ? 1 : p === "5L" ? 5 : p === "20L" ? 20 : 0;
 
-const BUCKET = "test-product-images";
-
-async function signedUrl(path: string) {
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
-  return data?.signedUrl ?? "";
-}
-
 export default function TestPOSPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -45,7 +40,6 @@ export default function TestPOSPage() {
   const [customer, setCustomer] = useState<string>("none");
   const [payment, setPayment] = useState<string>("efectivo");
   const [discount, setDiscount] = useState<number>(0);
-  const [imgUrls, setImgUrls] = useState<Record<string, string>>({});
   const [lastSaleId, setLastSaleId] = useState<string | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
 
@@ -53,14 +47,10 @@ export default function TestPOSPage() {
     queryKey: ["test_products_pos"],
     queryFn: async () => {
       const { data } = await supabase.from("test_products").select("*").eq("active", true).order("name");
-      const urls: Record<string, string> = {};
-      for (const p of data ?? []) {
-        if (p.image_url) urls[p.id] = await signedUrl(p.image_url);
-      }
-      setImgUrls(urls);
       return data ?? [];
     },
   });
+  const { urls: imgUrls, refreshImage } = useProductImageUrls(products);
   const { data: customers = [] } = useQuery({
     queryKey: ["customers_test_pos"],
     queryFn: async () => (await supabase.from("customers").select("id,name")).data ?? [],
@@ -185,7 +175,7 @@ export default function TestPOSPage() {
 
   return (
     <div>
-      <PageHeader title="POS (versión prueba)" subtitle="Venta directa con productos de alta manual · ticket 40 mm" />
+      <PageHeader title="POS (versión prueba)" subtitle="Venta directa con productos de alta manual · ticket 58 mm" />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div>
@@ -207,7 +197,7 @@ export default function TestPOSPage() {
                   <Card key={p.id} className="p-3">
                     <div className="flex gap-3">
                       {imgUrls[p.id]
-                        ? <img src={imgUrls[p.id]} alt={p.name} className="h-16 w-16 rounded object-cover" />
+                        ? <img src={imgUrls[p.id]} alt={p.name} className="h-16 w-16 rounded object-cover" onError={() => refreshImage(p.id)} />
                         : <div className="flex h-16 w-16 items-center justify-center rounded bg-muted"><ImageIcon className="h-5 w-5 text-muted-foreground" /></div>}
                       <div className="flex-1">
                         <div className="font-medium">{p.name}</div>
@@ -238,7 +228,7 @@ export default function TestPOSPage() {
                 {filtered.map((p: any) => (
                   <Card key={p.id} className="p-3 cursor-pointer hover:border-primary" onClick={() => addPiece(p)}>
                     {imgUrls[p.id]
-                      ? <img src={imgUrls[p.id]} alt={p.name} className="h-24 w-full rounded object-cover" />
+                      ? <img src={imgUrls[p.id]} alt={p.name} className="h-24 w-full rounded object-cover" onError={() => refreshImage(p.id)} />
                       : <div className="flex h-24 items-center justify-center rounded bg-muted"><ImageIcon className="h-6 w-6 text-muted-foreground" /></div>}
                     <div className="mt-2 font-medium text-sm">{p.name}</div>
                     <div className="text-xs text-muted-foreground">{p.category}</div>
@@ -319,9 +309,10 @@ function TicketDialog({ saleId, open, onOpenChange }: { saleId: string | null; o
     enabled: !!saleId && open,
     queryKey: ["test_sale_ticket", saleId],
     queryFn: async () => {
+      if (!saleId) throw new Error("Falta el folio de la venta");
       const [s, items, biz] = await Promise.all([
-        supabase.from("test_sales").select("*, customers(name)").eq("id", saleId!).single(),
-        supabase.from("test_sale_items").select("*").eq("sale_id", saleId!),
+        supabase.from("test_sales").select("*, customers(name,address,city,phone)").eq("id", saleId).single(),
+        supabase.from("test_sale_items").select("*").eq("sale_id", saleId),
         supabase.from("settings").select("*").limit(1).maybeSingle(),
       ]);
       return { sale: s.data, items: items.data ?? [], biz: biz.data };
@@ -329,77 +320,111 @@ function TicketDialog({ saleId, open, onOpenChange }: { saleId: string | null; o
   });
 
   const print = () => {
-    const el = document.getElementById("ticket-40mm");
+    const el = document.getElementById("ticket-58mm");
     if (!el) return;
-    const w = window.open("", "_blank", "width=300,height=600");
+    const w = window.open("", "_blank", "width=420,height=760");
     if (!w) return;
     w.document.write(`<!doctype html><html><head><title>Ticket</title>
       <style>
-        @page { size: 40mm auto; margin: 0; }
-        body { margin: 0; }
-        .ticket { width: 40mm; padding: 2mm; font-family: 'Courier New', monospace; font-size: 9px; color: #000; }
-        .ticket .center { text-align: center; }
-        .ticket .bold { font-weight: 700; }
-        .ticket hr { border: none; border-top: 1px dashed #000; margin: 3px 0; }
-        .ticket table { width: 100%; border-collapse: collapse; }
-        .ticket td { padding: 1px 0; vertical-align: top; }
-        .ticket .right { text-align: right; }
-        .ticket .name { word-break: break-word; }
-        .ticket .total { font-size: 11px; font-weight: 700; }
+        @page { size: 58mm auto; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { width: 58mm; margin: 0; padding: 0; background: #fff; color: #000; }
+        body { font-family: Arial, Helvetica, sans-serif; }
+        .ticket { width: 58mm; min-height: 1px; padding: 3mm 3mm 5mm; font-size: 9px; line-height: 1.28; color: #000; background: #fff; }
+        .ticket-logo { display: block; width: 42mm; max-height: 24mm; object-fit: contain; margin: 0 auto 1.5mm; filter: grayscale(1) contrast(1.45); }
+        .ticket-kicker { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+        .ticket-center { text-align: center; }
+        .ticket-title { font-size: 11px; font-weight: 800; margin: 0 0 1mm; }
+        .ticket-meta { margin: 2mm 0; }
+        .ticket-meta div { display: flex; justify-content: space-between; gap: 2mm; }
+        .ticket-meta span:last-child { text-align: right; }
+        .ticket-label { font-weight: 800; }
+        .ticket-rule { border: 0; border-top: .35mm dashed #000; margin: 2mm 0; }
+        .ticket table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .ticket th { padding: 0 0 1mm; border-bottom: .3mm solid #000; font-size: 8px; text-align: right; }
+        .ticket th:first-child { width: 49%; text-align: left; }
+        .ticket td { padding: 1.2mm 0 0; vertical-align: top; text-align: right; word-break: break-word; }
+        .ticket td:first-child { text-align: left; padding-right: 1mm; }
+        .ticket-product { font-weight: 800; }
+        .ticket-presentation { display: block; font-size: 7px; font-weight: 400; }
+        .ticket-summary td { padding-top: .7mm; }
+        .ticket-total td { border-top: .45mm solid #000; padding-top: 1.5mm; font-size: 15px; font-weight: 900; }
+        .ticket-status { margin: 2mm 0; padding: 1.5mm; border: .4mm solid #000; font-weight: 900; text-align: center; }
+        .ticket-thanks { margin-top: 2.5mm; font-size: 10px; font-weight: 800; text-align: center; }
+        .ticket-footer { margin-top: 1mm; font-size: 7px; text-align: center; }
       </style></head><body>${el.outerHTML}</body></html>`);
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); w.close(); }, 250);
+    setTimeout(() => { w.print(); w.close(); }, 500);
   };
 
   const sale = data?.sale;
   const items = data?.items ?? [];
   const biz = data?.biz;
+  const customer = sale?.customers;
+  const saleDate = sale ? new Date(sale.created_at) : null;
+  const paymentLabel: Record<string, string> = {
+    efectivo: "Efectivo",
+    tarjeta: "Tarjeta",
+    transferencia: "Transferencia",
+    credito: "Crédito",
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader><DialogTitle>Ticket de venta</DialogTitle></DialogHeader>
         {sale && (
           <div className="flex flex-col items-center">
-            <div id="ticket-40mm" className="ticket border bg-white" style={{ width: "40mm", padding: "2mm", fontFamily: "'Courier New', monospace", fontSize: 9, color: "#000" }}>
-              <div className="center bold" style={{ textAlign: "center", fontWeight: 700 }}>{biz?.business_name ?? "CleanFab"}</div>
-              {biz?.address && <div className="center" style={{ textAlign: "center" }}>{biz.address}</div>}
-              {biz?.phone && <div className="center" style={{ textAlign: "center" }}>Tel: {biz.phone}</div>}
-              <hr style={{ border: "none", borderTop: "1px dashed #000", margin: "3px 0" }} />
-              <div>Ticket: #{sale.id.substring(0, 8)}</div>
-              <div>{new Date(sale.created_at).toLocaleString()}</div>
-              <div>Cliente: {sale.customers?.name ?? "Público general"}</div>
-              <div>Pago: {sale.payment_method}{sale.is_credit ? " (CRÉDITO)" : ""}</div>
-              <hr style={{ border: "none", borderTop: "1px dashed #000", margin: "3px 0" }} />
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div id="ticket-58mm" className="ticket-thermal w-[58mm] border bg-card text-foreground">
+              <img className="ticket-logo" src={beeCleanLogo.url} alt="Bee Clean" />
+              <div className="ticket-center ticket-kicker">Productos y servicios de limpieza</div>
+              <div className="ticket-center ticket-title">{biz?.business_name || "BEE CLEAN"}</div>
+              <div className="ticket-center">{biz?.address || "Av. Aquiles Serdán 888, casi esquina con Doroteo Arango, Col. Tabachines 1, Los Mochis, Sin. C.P. 81257"}</div>
+              <div className="ticket-center">RFC: NACJ020202R24</div>
+              <div className="ticket-center">Tel: {biz?.phone || "668 250 50 34"}</div>
+
+              <hr className="ticket-rule" />
+              <div className="ticket-meta">
+                <div><span className="ticket-label">FOLIO</span><span>#{sale.id.substring(0, 8).toUpperCase()}</span></div>
+                <div><span className="ticket-label">FECHA</span><span>{saleDate?.toLocaleDateString("es-MX")}</span></div>
+                <div><span className="ticket-label">HORA</span><span>{saleDate?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span></div>
+              </div>
+
+              <hr className="ticket-rule" />
+              <div><span className="ticket-label">CLIENTE: </span>{customer?.name || "Público general"}</div>
+              {customer?.address && <div><span className="ticket-label">DIRECCIÓN: </span>{customer.address}{customer.city ? `, ${customer.city}` : ""}</div>}
+              {customer?.phone && <div><span className="ticket-label">TELÉFONO: </span>{customer.phone}</div>}
+              <div><span className="ticket-label">PAGO: </span>{paymentLabel[sale.payment_method] || sale.payment_method}</div>
+
+              <hr className="ticket-rule" />
+              <table>
+                <thead>
+                  <tr><th>PRODUCTO</th><th>CANT.</th><th>PRECIO</th><th>IMPORTE</th></tr>
+                </thead>
                 <tbody>
-                  {items.map((it: any) => (
-                    <tr key={it.id}>
-                      <td colSpan={2} style={{ fontWeight: 700 }}>{it.product_name}</td>
-                      <td></td>
+                  {items.map((item: any) => (
+                    <tr key={item.id}>
+                      <td className="ticket-product">{item.product_name}<span className="ticket-presentation">{item.presentation}</span></td>
+                      <td>{Number(item.quantity).toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
+                      <td>${Number(item.unit_price).toFixed(2)}</td>
+                      <td>${Number(item.subtotal).toFixed(2)}</td>
                     </tr>
-                  )).flatMap((row, i) => [
-                    row,
-                    <tr key={`d-${items[i].id}`}>
-                      <td>{Number(items[i].quantity)} {items[i].presentation}</td>
-                      <td style={{ textAlign: "right" }}>${Number(items[i].unit_price).toFixed(2)}</td>
-                      <td style={{ textAlign: "right" }}>${Number(items[i].subtotal).toFixed(2)}</td>
-                    </tr>,
-                  ])}
+                  ))}
                 </tbody>
               </table>
-              <hr style={{ border: "none", borderTop: "1px dashed #000", margin: "3px 0" }} />
-              <table style={{ width: "100%" }}>
+
+              <hr className="ticket-rule" />
+              <table className="ticket-summary">
                 <tbody>
-                  <tr><td>Subtotal</td><td style={{ textAlign: "right" }}>${Number(sale.subtotal).toFixed(2)}</td></tr>
-                  <tr><td>Descuento</td><td style={{ textAlign: "right" }}>-${Number(sale.discount).toFixed(2)}</td></tr>
-                  <tr style={{ fontWeight: 700, fontSize: 11 }}><td>TOTAL</td><td style={{ textAlign: "right" }}>${Number(sale.total).toFixed(2)}</td></tr>
-                  {sale.is_credit && <tr><td colSpan={2} className="center" style={{ textAlign: "center", fontWeight: 700 }}>*** PAGO PENDIENTE ***</td></tr>}
+                  <tr><td>Subtotal</td><td>${Number(sale.subtotal).toFixed(2)}</td></tr>
+                  {Number(sale.discount) > 0 && <tr><td>Descuento</td><td>-${Number(sale.discount).toFixed(2)}</td></tr>}
+                  <tr className="ticket-total"><td>TOTAL</td><td>${Number(sale.total).toFixed(2)}</td></tr>
                 </tbody>
               </table>
-              <hr style={{ border: "none", borderTop: "1px dashed #000", margin: "3px 0" }} />
-              <div className="center" style={{ textAlign: "center" }}>¡Gracias por su compra!</div>
+              {sale.is_credit && <div className="ticket-status">PAGO PENDIENTE</div>}
+              <div className="ticket-thanks">¡Gracias por elegir Bee Clean!</div>
+              <div className="ticket-footer">Conserva este ticket para cualquier aclaración.</div>
             </div>
           </div>
         )}

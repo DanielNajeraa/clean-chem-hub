@@ -11,13 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Pencil, Trash2, Upload, Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useProductImageUrls } from "@/hooks/use-product-image-urls";
 
 const BUCKET = "test-product-images";
-
-async function signedUrl(path: string) {
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
-  return data?.signedUrl ?? "";
-}
 
 function TestProductsPage() {
   const qc = useQueryClient();
@@ -25,21 +21,15 @@ function TestProductsPage() {
   const [open, setOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [imgUrls, setImgUrls] = useState<Record<string, string>>({});
 
   const { data: products = [] } = useQuery({
     queryKey: ["test_products"],
     queryFn: async () => {
       const { data } = await supabase.from("test_products").select("*").order("name");
-      // resolve signed urls
-      const urls: Record<string, string> = {};
-      for (const p of data ?? []) {
-        if (p.image_url) urls[p.id] = await signedUrl(p.image_url);
-      }
-      setImgUrls(urls);
       return data ?? [];
     },
   });
+  const { urls: imgUrls, refreshImage } = useProductImageUrls(products);
 
   const startNew = () => {
     setEditing({
@@ -123,7 +113,7 @@ function TestProductsPage() {
               <TableRow key={p.id}>
                 <TableCell>
                   {imgUrls[p.id]
-                    ? <img src={imgUrls[p.id]} alt={p.name} className="h-12 w-12 rounded object-cover" />
+                    ? <img src={imgUrls[p.id]} alt={p.name} className="h-12 w-12 rounded object-cover" onError={() => refreshImage(p.id)} />
                     : <div className="flex h-12 w-12 items-center justify-center rounded bg-muted"><ImageIcon className="h-5 w-5 text-muted-foreground" /></div>}
                 </TableCell>
                 <TableCell className="font-medium">{p.name}</TableCell>
@@ -217,7 +207,12 @@ function TestProductsPage() {
 function PreviewImage({ path }: { path: string }) {
   const { data } = useQuery({
     queryKey: ["test_img", path],
-    queryFn: () => signedUrl(path),
+    queryFn: async () => {
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 86400);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+    staleTime: 0,
   });
   if (!data) return null;
   return <img src={data} alt="preview" className="h-16 w-16 rounded object-cover border" />;

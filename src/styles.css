@@ -130,3 +130,42 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+@layer components {
+  .ticket-thermal {
+    padding: 3mm 3mm 5mm;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9px;
+    line-height: 1.28;
+  }
+
+  .ticket-thermal .ticket-logo {
+    display: block;
+    width: 42mm;
+    max-height: 24mm;
+    object-fit: contain;
+    margin: 0 auto 1.5mm;
+    filter: grayscale(1) contrast(1.45);
+  }
+
+  .ticket-thermal .ticket-center { text-align: center; }
+  .ticket-thermal .ticket-kicker { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0; }
+  .ticket-thermal .ticket-title { margin-bottom: 1mm; font-size: 11px; font-weight: 800; }
+  .ticket-thermal .ticket-meta { margin: 2mm 0; }
+  .ticket-thermal .ticket-meta div { display: flex; justify-content: space-between; gap: 2mm; }
+  .ticket-thermal .ticket-meta span:last-child { text-align: right; }
+  .ticket-thermal .ticket-label { font-weight: 800; }
+  .ticket-thermal .ticket-rule { border: 0; border-top: 0.35mm dashed currentColor; margin: 2mm 0; }
+  .ticket-thermal table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .ticket-thermal th { padding: 0 0 1mm; border-bottom: 0.3mm solid currentColor; font-size: 8px; text-align: right; }
+  .ticket-thermal th:first-child { width: 49%; text-align: left; }
+  .ticket-thermal td { padding: 1.2mm 0 0; vertical-align: top; text-align: right; word-break: break-word; }
+  .ticket-thermal td:first-child { padding-right: 1mm; text-align: left; }
+  .ticket-thermal .ticket-product { font-weight: 800; }
+  .ticket-thermal .ticket-presentation { display: block; font-size: 7px; font-weight: 400; }
+  .ticket-thermal .ticket-summary td { padding-top: 0.7mm; }
+  .ticket-thermal .ticket-total td { border-top: 0.45mm solid currentColor; padding-top: 1.5mm; font-size: 15px; font-weight: 900; }
+  .ticket-thermal .ticket-status { margin: 2mm 0; padding: 1.5mm; border: 0.4mm solid currentColor; font-weight: 900; text-align: center; }
+  .ticket-thermal .ticket-thanks { margin-top: 2.5mm; font-size: 10px; font-weight: 800; text-align: center; }
+  .ticket-thermal .ticket-footer { margin-top: 1mm; font-size: 7px; text-align: center; }
+}
