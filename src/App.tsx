@@ -22,6 +22,7 @@ import Settings from "@/pages/Settings";
 import Promotions from "@/pages/Promotions";
 import TestProducts from "@/pages/TestProducts";
 import TestPOSPage from "@/pages/TestPOSPage";
+import TestSales from "@/pages/TestSales";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
@@ -52,6 +53,7 @@ export default function App() {
                 <Route path="/promotions" element={<Promotions />} />
                 <Route path="/test-products" element={<TestProducts />} />
                 <Route path="/test-pos" element={<TestPOSPage />} />
+                <Route path="/test-sales" element={<TestSales />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

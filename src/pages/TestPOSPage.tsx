@@ -8,13 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Minus, Printer, Image as ImageIcon, Search } from "lucide-react";
+import { Trash2, Plus, Minus, Image as ImageIcon, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useProductImageUrls } from "@/hooks/use-product-image-urls";
-import beeCleanLogo from "@/assets/bee-clean-logo.png";
+import { TestSaleTicketDialog } from "@/components/TestSaleTicket";
 
 type Preset = "granel" | "1L" | "5L" | "20L" | "pieza";
 
@@ -171,6 +170,7 @@ export default function TestPOSPage() {
     setPayment("efectivo");
     qc.invalidateQueries({ queryKey: ["test_products_pos"] });
     qc.invalidateQueries({ queryKey: ["test_products"] });
+    qc.invalidateQueries({ queryKey: ["test_sales_list"] });
   };
 
   return (
@@ -299,140 +299,7 @@ export default function TestPOSPage() {
         </Card>
       </div>
 
-      <TicketDialog saleId={lastSaleId} open={ticketOpen} onOpenChange={setTicketOpen} />
+      <TestSaleTicketDialog saleId={lastSaleId} open={ticketOpen} onOpenChange={setTicketOpen} />
     </div>
-  );
-}
-
-function TicketDialog({ saleId, open, onOpenChange }: { saleId: string | null; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { data } = useQuery({
-    enabled: !!saleId && open,
-    queryKey: ["test_sale_ticket", saleId],
-    queryFn: async () => {
-      if (!saleId) throw new Error("Falta el folio de la venta");
-      const [s, items, biz] = await Promise.all([
-        supabase.from("test_sales").select("*, customers(name,address,city,phone)").eq("id", saleId).single(),
-        supabase.from("test_sale_items").select("*").eq("sale_id", saleId),
-        supabase.from("settings").select("*").limit(1).maybeSingle(),
-      ]);
-      return { sale: s.data, items: items.data ?? [], biz: biz.data };
-    },
-  });
-
-  const print = () => {
-    const el = document.getElementById("ticket-58mm");
-    if (!el) return;
-    const w = window.open("", "_blank", "width=420,height=760");
-    if (!w) return;
-    w.document.write(`<!doctype html><html><head><title>Ticket</title>
-      <style>
-        @page { size: 58mm auto; margin: 0; }
-        * { box-sizing: border-box; }
-        html, body { width: 58mm; margin: 0; padding: 0; background: #fff; color: #000; }
-        body { font-family: Arial, Helvetica, sans-serif; }
-        .ticket { width: 58mm; min-height: 1px; padding: 3mm 3mm 5mm; font-size: 9px; line-height: 1.28; color: #000; background: #fff; }
-        .ticket-logo { display: block; width: 42mm; max-height: 24mm; object-fit: contain; margin: 0 auto 1.5mm; filter: grayscale(1) contrast(1.45); }
-        .ticket-kicker { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-        .ticket-center { text-align: center; }
-        .ticket-title { font-size: 11px; font-weight: 800; margin: 0 0 1mm; }
-        .ticket-meta { margin: 2mm 0; }
-        .ticket-meta div { display: flex; justify-content: space-between; gap: 2mm; }
-        .ticket-meta span:last-child { text-align: right; }
-        .ticket-label { font-weight: 800; }
-        .ticket-rule { border: 0; border-top: .35mm dashed #000; margin: 2mm 0; }
-        .ticket table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .ticket th { padding: 0 0 1mm; border-bottom: .3mm solid #000; font-size: 8px; text-align: right; }
-        .ticket th:first-child { width: 49%; text-align: left; }
-        .ticket td { padding: 1.2mm 0 0; vertical-align: top; text-align: right; word-break: break-word; }
-        .ticket td:first-child { text-align: left; padding-right: 1mm; }
-        .ticket-product { font-weight: 800; }
-        .ticket-presentation { display: block; font-size: 7px; font-weight: 400; }
-        .ticket-summary td { padding-top: .7mm; }
-        .ticket-total td { border-top: .45mm solid #000; padding-top: 1.5mm; font-size: 15px; font-weight: 900; }
-        .ticket-status { margin: 2mm 0; padding: 1.5mm; border: .4mm solid #000; font-weight: 900; text-align: center; }
-        .ticket-thanks { margin-top: 2.5mm; font-size: 10px; font-weight: 800; text-align: center; }
-        .ticket-footer { margin-top: 1mm; font-size: 7px; text-align: center; }
-      </style></head><body>${el.outerHTML}</body></html>`);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); w.close(); }, 500);
-  };
-
-  const sale = data?.sale;
-  const items = data?.items ?? [];
-  const biz = data?.biz;
-  const customer = sale?.customers;
-  const saleDate = sale ? new Date(sale.created_at) : null;
-  const paymentLabel: Record<string, string> = {
-    efectivo: "Efectivo",
-    tarjeta: "Tarjeta",
-    transferencia: "Transferencia",
-    credito: "Crédito",
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
-        <DialogHeader><DialogTitle>Ticket de venta</DialogTitle></DialogHeader>
-        {sale && (
-          <div className="flex flex-col items-center">
-            <div id="ticket-58mm" className="ticket-thermal w-[58mm] border bg-card text-foreground">
-              <img className="ticket-logo" src={beeCleanLogo} alt="Bee Clean" />
-              <div className="ticket-center ticket-kicker">Productos y servicios de limpieza</div>
-              <div className="ticket-center ticket-title">{biz?.business_name || "BEE CLEAN"}</div>
-              <div className="ticket-center">{biz?.address || "Av. Aquiles Serdán 888, casi esquina con Doroteo Arango, Col. Tabachines 1, Los Mochis, Sin. C.P. 81257"}</div>
-              <div className="ticket-center">RFC: NACJ020202R24</div>
-              <div className="ticket-center">Tel: {biz?.phone || "668 250 50 34"}</div>
-
-              <hr className="ticket-rule" />
-              <div className="ticket-meta">
-                <div><span className="ticket-label">FOLIO</span><span>#{sale.id.substring(0, 8).toUpperCase()}</span></div>
-                <div><span className="ticket-label">FECHA</span><span>{saleDate?.toLocaleDateString("es-MX")}</span></div>
-                <div><span className="ticket-label">HORA</span><span>{saleDate?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span></div>
-              </div>
-
-              <hr className="ticket-rule" />
-              <div><span className="ticket-label">CLIENTE: </span>{customer?.name || "Público general"}</div>
-              {customer?.address && <div><span className="ticket-label">DIRECCIÓN: </span>{customer.address}{customer.city ? `, ${customer.city}` : ""}</div>}
-              {customer?.phone && <div><span className="ticket-label">TELÉFONO: </span>{customer.phone}</div>}
-              <div><span className="ticket-label">PAGO: </span>{paymentLabel[sale.payment_method] || sale.payment_method}</div>
-
-              <hr className="ticket-rule" />
-              <table>
-                <thead>
-                  <tr><th>PRODUCTO</th><th>CANT.</th><th>PRECIO</th><th>IMPORTE</th></tr>
-                </thead>
-                <tbody>
-                  {items.map((item: any) => (
-                    <tr key={item.id}>
-                      <td className="ticket-product">{item.product_name}<span className="ticket-presentation">{item.presentation}</span></td>
-                      <td>{Number(item.quantity).toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
-                      <td>${Number(item.unit_price).toFixed(2)}</td>
-                      <td>${Number(item.subtotal).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <hr className="ticket-rule" />
-              <table className="ticket-summary">
-                <tbody>
-                  <tr><td>Subtotal</td><td>${Number(sale.subtotal).toFixed(2)}</td></tr>
-                  {Number(sale.discount) > 0 && <tr><td>Descuento</td><td>-${Number(sale.discount).toFixed(2)}</td></tr>}
-                  <tr className="ticket-total"><td>TOTAL</td><td>${Number(sale.total).toFixed(2)}</td></tr>
-                </tbody>
-              </table>
-              {sale.is_credit && <div className="ticket-status">PAGO PENDIENTE</div>}
-              <div className="ticket-thanks">¡Gracias por elegir Bee Clean!</div>
-              <div className="ticket-footer">Conserva este ticket para cualquier aclaración.</div>
-            </div>
-          </div>
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
-          <Button onClick={print}><Printer className="mr-2 h-4 w-4" />Imprimir</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

@@ -28,6 +28,7 @@ const items: Item[] = [
   { title: "Promociones", url: "/promotions", icon: Gift, roles: ["admin","vendedor"] },
   { title: "Productos (prueba)", url: "/test-products", icon: TestTube, roles: ["admin","vendedor"] },
   { title: "POS (prueba)", url: "/test-pos", icon: TestTube, roles: ["admin","vendedor"] },
+  { title: "Ventas (prueba)", url: "/test-sales", icon: Receipt, roles: ["admin","vendedor"] },
 ];
 
 export function AppSidebar() {
