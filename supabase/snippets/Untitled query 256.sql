@@ -1,1 +1,1 @@
-SELECT * FROM public.profiles;
+SELECT id, email FROM public.profiles;

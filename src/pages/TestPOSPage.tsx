@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -14,7 +14,7 @@ import { Trash2, Plus, Minus, Printer, Image as ImageIcon, Search } from "lucide
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useProductImageUrls } from "@/hooks/use-product-image-urls";
-import beeCleanLogo from "@/assets/bee-clean-logo.png.asset.json";
+import beeCleanLogo from "@/assets/bee-clean-logo.png";
 
 type Preset = "granel" | "1L" | "5L" | "20L" | "pieza";
 
@@ -377,7 +377,7 @@ function TicketDialog({ saleId, open, onOpenChange }: { saleId: string | null; o
         {sale && (
           <div className="flex flex-col items-center">
             <div id="ticket-58mm" className="ticket-thermal w-[58mm] border bg-card text-foreground">
-              <img className="ticket-logo" src={beeCleanLogo.url} alt="Bee Clean" />
+              <img className="ticket-logo" src={beeCleanLogo} alt="Bee Clean" />
               <div className="ticket-center ticket-kicker">Productos y servicios de limpieza</div>
               <div className="ticket-center ticket-title">{biz?.business_name || "BEE CLEAN"}</div>
               <div className="ticket-center">{biz?.address || "Av. Aquiles Serdán 888, casi esquina con Doroteo Arango, Col. Tabachines 1, Los Mochis, Sin. C.P. 81257"}</div>

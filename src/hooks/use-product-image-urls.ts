@@ -21,10 +21,12 @@ async function createProductImageUrl(path: string) {
 export function useProductImageUrls(products: ProductImage[]) {
   const [urls, setUrls] = useState<Record<string, string>>({});
   const productPathsRef = useRef<Record<string, string>>({});
+  const retriedRef = useRef<Set<string>>(new Set());
 
   const refreshImage = useCallback(async (productId: string) => {
     const path = productPathsRef.current[productId];
-    if (!path) return;
+    if (!path || retriedRef.current.has(productId)) return;
+    retriedRef.current.add(productId);
 
     try {
       const url = await createProductImageUrl(path);
@@ -38,16 +40,25 @@ export function useProductImageUrls(products: ProductImage[]) {
     }
   }, []);
 
+  // Stable key so the effect only re-runs when ids/paths actually change,
+  // not on every render (e.g. `data = []` defaults create a new array each time).
+  const pathsKey = JSON.stringify(
+    products
+      .filter((product) => Boolean(product.image_url))
+      .map((product) => [product.id, product.image_url as string]),
+  );
+
   useEffect(() => {
     let active = true;
-    const paths = Object.fromEntries(
-      products
-        .filter((product) => Boolean(product.image_url))
-        .map((product) => [product.id, product.image_url as string]),
-    );
+    const paths: Record<string, string> = Object.fromEntries(JSON.parse(pathsKey));
     productPathsRef.current = paths;
+    retriedRef.current = new Set();
 
-    setUrls({});
+    if (Object.keys(paths).length === 0) {
+      setUrls((current) => (Object.keys(current).length === 0 ? current : {}));
+      return;
+    }
+
     Promise.all(
       Object.entries(paths).map(async ([productId, path]) => {
         try {
@@ -64,7 +75,7 @@ export function useProductImageUrls(products: ProductImage[]) {
     return () => {
       active = false;
     };
-  }, [products]);
+  }, [pathsKey]);
 
   return { urls, refreshImage };
 }
