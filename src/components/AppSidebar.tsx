@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingCart, Package, FlaskConical, Beaker, Droplet,
-  Factory, Users, Receipt, LogOut, UserCog, Sparkles, Tags, Gift, TestTube,
+  Factory, Users, Receipt, LogOut, UserCog, Tags, Gift, TestTube,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth, type AppRole } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import beeCleanLogo from "@/assets/bee-clean-logo.png";
 
 type Item = { title: string; url: string; icon: typeof LayoutDashboard; roles: AppRole[] };
 
@@ -38,11 +39,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-success text-success-foreground">
-            <Sparkles className="h-5 w-5" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white p-0.5">
+            <img src={beeCleanLogo} alt="Bee Clean" className="h-full w-full object-contain" />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold text-sidebar-foreground">CleanFab</span>
+            <span className="text-sm font-semibold text-sidebar-foreground">Bee Clean</span>
             <span className="text-[11px] text-sidebar-foreground/60 capitalize">{role ?? ""}</span>
           </div>
         </div>

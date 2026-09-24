@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import beeCleanLogo from "@/assets/bee-clean-logo.png";
 import { toast } from "sonner";
 
 export default function Login() {
@@ -56,11 +57,8 @@ export default function Login() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-between bg-primary p-10 text-primary-foreground">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success text-success-foreground">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <span className="text-lg font-semibold">CleanFab</span>
+        <div className="w-fit rounded-xl bg-white p-3 shadow-sm">
+          <img src={beeCleanLogo} alt="Bee Clean" className="h-20 w-auto object-contain" />
         </div>
         <div>
           <h1 className="text-4xl font-bold leading-tight">Fabrica, controla y vende.</h1>
@@ -68,11 +66,12 @@ export default function Login() {
             Sistema integral para tu negocio de productos de limpieza: inventario, fórmulas, producción y punto de venta.
           </p>
         </div>
-        <div className="text-xs text-primary-foreground/50">© CleanFab 2026</div>
+        <div className="text-xs text-primary-foreground/50">© Bee Clean 2026</div>
       </div>
 
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md">
+          <img src={beeCleanLogo} alt="Bee Clean" className="mx-auto mb-6 h-20 w-auto object-contain lg:hidden" />
           <h2 className="text-2xl font-semibold">Acceder</h2>
           <p className="mt-1 text-sm text-muted-foreground">Inicia sesión o crea la cuenta inicial del administrador.</p>
 
