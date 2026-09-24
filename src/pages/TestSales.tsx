@@ -10,9 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Eye, DollarSign, Printer, Search } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Eye, DollarSign, Printer, Search, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { TestSaleTicketDialog, PAYMENT_LABELS, saleFolio } from "@/components/TestSaleTicket";
+import { TestSaleEditDialog, deleteTestSale } from "@/components/TestSaleEditDialog";
 
 type RangeKind = "today" | "yesterday" | "week" | "month" | "year" | "custom" | "all";
 
@@ -34,6 +39,32 @@ export default function TestSales() {
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [abonoSale, setAbonoSale] = useState<any | null>(null);
   const [abonoAmount, setAbonoAmount] = useState(0);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteSale, setDeleteSale] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const refreshAll = () => {
+    qc.invalidateQueries({ queryKey: ["test_sales_list"] });
+    qc.invalidateQueries({ queryKey: ["test_sale_detail"] });
+    qc.invalidateQueries({ queryKey: ["test_sale_ticket"] });
+    qc.invalidateQueries({ queryKey: ["test_products_pos"] });
+    qc.invalidateQueries({ queryKey: ["test_products"] });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteSale) return;
+    setDeleting(true);
+    try {
+      await deleteTestSale(deleteSale.id);
+      toast.success(`Venta #${saleFolio(deleteSale.id)} eliminada`);
+      setDeleteSale(null);
+      refreshAll();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo eliminar la venta");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fromDate = useMemo(() => {
     const d = new Date();
@@ -209,6 +240,8 @@ export default function TestSales() {
                     )}
                     <Button size="sm" variant="ghost" title="Ver detalle" onClick={() => setView(s.id)}><Eye className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" title="Ver / imprimir ticket" onClick={() => setTicketId(s.id)}><Printer className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" title="Editar venta" onClick={() => setEditId(s.id)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="ghost" title="Eliminar venta" className="text-destructive hover:text-destructive" onClick={() => setDeleteSale(s)}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               );
@@ -267,6 +300,7 @@ export default function TestSales() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setView(null)}>Cerrar</Button>
+            <Button variant="outline" onClick={() => { setEditId(view); setView(null); }}><Pencil className="mr-2 h-4 w-4" />Editar</Button>
             <Button onClick={() => { setTicketId(view); setView(null); }}><Printer className="mr-2 h-4 w-4" />Ver / imprimir ticket</Button>
           </DialogFooter>
         </DialogContent>
@@ -294,6 +328,30 @@ export default function TestSales() {
       </Dialog>
 
       <TestSaleTicketDialog saleId={ticketId} open={!!ticketId} onOpenChange={(o) => !o && setTicketId(null)} />
+
+      <TestSaleEditDialog saleId={editId} onClose={() => setEditId(null)} onSaved={refreshAll} />
+
+      <AlertDialog open={!!deleteSale} onOpenChange={(o) => !o && !deleting && setDeleteSale(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar la venta #{deleteSale ? saleFolio(deleteSale.id) : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borrará la venta de {deleteSale?.customers?.name ?? "Público general"} por ${Number(deleteSale?.total ?? 0).toFixed(2)} y
+              los productos regresarán al inventario. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+            >
+              Eliminar venta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
