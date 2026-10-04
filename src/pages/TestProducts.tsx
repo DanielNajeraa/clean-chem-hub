@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Image as ImageIcon, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useProductImageUrls } from "@/hooks/use-product-image-urls";
@@ -30,6 +30,30 @@ function TestProductsPage() {
     },
   });
   const { urls: imgUrls, refreshImage } = useProductImageUrls(products);
+
+  const [search, setSearch] = useState("");
+  const [typeF, setTypeF] = useState("all");
+  const [categoryF, setCategoryF] = useState("all");
+  const [stockF, setStockF] = useState("all"); // all|in|out
+
+  const categories = useMemo(
+    () => [...new Set(products.map((p: any) => (p.category ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")),
+    [products],
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products.filter((p: any) => {
+      if (typeF !== "all" && p.unit_type !== typeF) return false;
+      if (categoryF !== "all" && (p.category ?? "").trim() !== categoryF) return false;
+      if (stockF === "in" && !(Number(p.stock) > 0)) return false;
+      if (stockF === "out" && Number(p.stock) > 0) return false;
+      return !q || p.name.toLowerCase().includes(q) || (p.category ?? "").toLowerCase().includes(q);
+    });
+  }, [products, search, typeF, categoryF, stockF]);
+
+  const hasFilters = search !== "" || typeF !== "all" || categoryF !== "all" || stockF !== "all";
+  const clearFilters = () => { setSearch(""); setTypeF("all"); setCategoryF("all"); setStockF("all"); };
 
   const startNew = () => {
     setEditing({
@@ -95,6 +119,49 @@ function TestProductsPage() {
         actions={<Button onClick={startNew}><Plus className="mr-2 h-4 w-4" />Nuevo</Button>}
       />
 
+      <div className="mb-4 flex flex-wrap items-end gap-2">
+        <div className="relative w-full sm:w-72">
+          <Label className="text-xs">Buscar</Label>
+          <Search className="absolute left-2 top-7.5 h-4 w-4 text-muted-foreground" />
+          <Input className="pl-8" placeholder="Nombre o categoría" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <div><Label className="text-xs">Tipo</Label>
+          <Select value={typeF} onValueChange={setTypeF}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="litro">Líquidos</SelectItem>
+              <SelectItem value="pieza">Piezas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div><Label className="text-xs">Categoría</Label>
+          <Select value={categoryF} onValueChange={setCategoryF}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div><Label className="text-xs">Stock</Label>
+          <Select value={stockF} onValueChange={setStockF}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="in">Con stock</SelectItem>
+              <SelectItem value="out">Sin stock</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {hasFilters && (
+          <Button variant="ghost" onClick={clearFilters}><X className="mr-1 h-4 w-4" />Limpiar</Button>
+        )}
+        <div className="ml-auto self-center text-sm text-muted-foreground">
+          {filtered.length} de {products.length} productos
+        </div>
+      </div>
+
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
@@ -109,11 +176,11 @@ function TestProductsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((p: any) => (
+            {filtered.map((p: any) => (
               <TableRow key={p.id}>
                 <TableCell>
                   {imgUrls[p.id]
-                    ? <img src={imgUrls[p.id]} alt={p.name} className="h-12 w-12 rounded object-cover" onError={() => refreshImage(p.id)} />
+                    ? <img src={imgUrls[p.id]} alt={p.name} className="h-12 w-12 rounded border bg-white object-contain p-0.5" onError={() => refreshImage(p.id)} />
                     : <div className="flex h-12 w-12 items-center justify-center rounded bg-muted"><ImageIcon className="h-5 w-5 text-muted-foreground" /></div>}
                 </TableCell>
                 <TableCell className="font-medium">{p.name}</TableCell>
@@ -138,6 +205,9 @@ function TestProductsPage() {
             ))}
             {products.length === 0 && (
               <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">Sin productos. Da de alta el primero.</TableCell></TableRow>
+            )}
+            {products.length > 0 && filtered.length === 0 && (
+              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">Ningún producto coincide con los filtros.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -215,7 +285,7 @@ function PreviewImage({ path }: { path: string }) {
     staleTime: 0,
   });
   if (!data) return null;
-  return <img src={data} alt="preview" className="h-16 w-16 rounded object-cover border" />;
+  return <img src={data} alt="preview" className="h-16 w-16 rounded border bg-white object-contain p-0.5" />;
 }
 
 export default TestProductsPage;

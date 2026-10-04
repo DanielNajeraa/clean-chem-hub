@@ -197,8 +197,8 @@ export default function TestPOSPage() {
                   <Card key={p.id} className="p-3">
                     <div className="flex gap-3">
                       {imgUrls[p.id]
-                        ? <img src={imgUrls[p.id]} alt={p.name} className="h-16 w-16 rounded object-cover" onError={() => refreshImage(p.id)} />
-                        : <div className="flex h-16 w-16 items-center justify-center rounded bg-muted"><ImageIcon className="h-5 w-5 text-muted-foreground" /></div>}
+                        ? <img src={imgUrls[p.id]} alt={p.name} className="h-16 w-16 shrink-0 rounded border bg-white object-contain p-0.5" onError={() => refreshImage(p.id)} />
+                        : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-muted"><ImageIcon className="h-5 w-5 text-muted-foreground" /></div>}
                       <div className="flex-1">
                         <div className="font-medium">{p.name}</div>
                         <div className="text-xs text-muted-foreground">{p.category}</div>
@@ -228,8 +228,8 @@ export default function TestPOSPage() {
                 {filtered.map((p: any) => (
                   <Card key={p.id} className="p-3 cursor-pointer hover:border-primary" onClick={() => addPiece(p)}>
                     {imgUrls[p.id]
-                      ? <img src={imgUrls[p.id]} alt={p.name} className="h-24 w-full rounded object-cover" onError={() => refreshImage(p.id)} />
-                      : <div className="flex h-24 items-center justify-center rounded bg-muted"><ImageIcon className="h-6 w-6 text-muted-foreground" /></div>}
+                      ? <img src={imgUrls[p.id]} alt={p.name} className="h-36 w-full rounded border bg-white object-contain p-1" onError={() => refreshImage(p.id)} />
+                      : <div className="flex h-36 items-center justify-center rounded bg-muted"><ImageIcon className="h-6 w-6 text-muted-foreground" /></div>}
                     <div className="mt-2 font-medium text-sm">{p.name}</div>
                     <div className="text-xs text-muted-foreground">{p.category}</div>
                     <div className="mt-1 flex items-center justify-between">
