@@ -21,6 +21,71 @@ import { TestSaleEditDialog, deleteTestSale } from "@/components/TestSaleEditDia
 
 type RangeKind = "today" | "yesterday" | "week" | "month" | "year" | "custom" | "all";
 
+const ABONO_METHOD_LABELS: Record<string, string> = {
+  efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia",
+  sin_detalle: "Sin detalle",
+};
+
+// Every abono of one credit sale, newest first. Abonos are written only by the
+// register_test_credit_payment RPC, so this list always adds up to amount_paid.
+function CreditPaymentsHistory({ saleId }: { saleId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["test_credit_payments", saleId],
+    queryFn: async () => {
+      const { data: payments, error } = await supabase
+        .from("test_credit_payments" as any)
+        .select("*")
+        .eq("sale_id", saleId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const rows = (payments ?? []) as any[];
+      const ids = [...new Set(rows.map((p) => p.user_id).filter(Boolean))];
+      const names: Record<string, string> = {};
+      if (ids.length) {
+        const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+        (profs ?? []).forEach((p: any) => { names[p.id] = p.full_name || p.email; });
+      }
+      return { rows, names };
+    },
+  });
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Cargando abonos…</p>;
+  const rows = data?.rows ?? [];
+  const sum = rows.reduce((s, p) => s + Number(p.amount), 0);
+
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between">
+        <h4 className="text-sm font-semibold">Historial de abonos ({rows.length})</h4>
+        {rows.length > 0 && <span className="text-xs text-muted-foreground">Total abonado: <b className="text-success">${sum.toFixed(2)}</b></span>}
+      </div>
+      {rows.length === 0 ? (
+        <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">Aún no hay abonos.</p>
+      ) : (
+        <div className="max-h-60 overflow-y-auto rounded-md border">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Fecha</TableHead><TableHead className="text-right">Monto</TableHead>
+              <TableHead>Método</TableHead><TableHead>Registró</TableHead><TableHead>Nota</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {rows.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="whitespace-nowrap text-xs">{new Date(p.created_at).toLocaleString("es-MX")}</TableCell>
+                  <TableCell className="text-right font-semibold">${Number(p.amount).toFixed(2)}</TableCell>
+                  <TableCell className="text-xs">{ABONO_METHOD_LABELS[p.payment_method] ?? p.payment_method}</TableCell>
+                  <TableCell className="text-xs">{(p.user_id && data?.names[p.user_id]) || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{p.notes || "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function statusBadge(s: any) {
   if (!s.is_credit) return <Badge variant="secondary">Pagada</Badge>;
   if (s.payment_status === "paid") return <Badge className="bg-success text-success-foreground">Crédito pagado</Badge>;
@@ -39,6 +104,9 @@ export default function TestSales() {
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [abonoSale, setAbonoSale] = useState<any | null>(null);
   const [abonoAmount, setAbonoAmount] = useState(0);
+  const [abonoMethod, setAbonoMethod] = useState("efectivo");
+  const [abonoNotes, setAbonoNotes] = useState("");
+  const [abonoSaving, setAbonoSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteSale, setDeleteSale] = useState<any | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -49,6 +117,14 @@ export default function TestSales() {
     qc.invalidateQueries({ queryKey: ["test_sale_ticket"] });
     qc.invalidateQueries({ queryKey: ["test_products_pos"] });
     qc.invalidateQueries({ queryKey: ["test_products"] });
+    qc.invalidateQueries({ queryKey: ["test_credit_payments"] });
+  };
+
+  const openAbono = (s: any) => {
+    setAbonoSale(s);
+    setAbonoAmount(Number((Number(s.total) - Number(s.amount_paid ?? 0)).toFixed(2)));
+    setAbonoMethod("efectivo");
+    setAbonoNotes("");
   };
 
   const confirmDelete = async () => {
@@ -143,19 +219,18 @@ export default function TestSales() {
   }, [sales]);
 
   const submitAbono = async () => {
-    if (!abonoSale || abonoAmount <= 0) return;
-    const newPaid = Math.min(Number(abonoSale.amount_paid ?? 0) + abonoAmount, Number(abonoSale.total));
-    const { error } = await supabase.from("test_sales").update({
-      amount_paid: newPaid,
-      payment_status: newPaid >= Number(abonoSale.total) ? "paid" : "partial",
-    }).eq("id", abonoSale.id);
+    if (!abonoSale) return;
+    if (abonoAmount <= 0) return toast.error("Escribe un monto mayor a 0");
+    setAbonoSaving(true);
+    const { error } = await supabase.rpc("register_test_credit_payment" as any, {
+      _sale_id: abonoSale.id, _amount: abonoAmount, _payment_method: abonoMethod, _notes: abonoNotes,
+    });
+    setAbonoSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Abono registrado");
+    toast.success(`Abono de $${abonoAmount.toFixed(2)} registrado`);
     setAbonoSale(null);
     setAbonoAmount(0);
-    qc.invalidateQueries({ queryKey: ["test_sales_list"] });
-    qc.invalidateQueries({ queryKey: ["test_sale_detail"] });
-    qc.invalidateQueries({ queryKey: ["test_sale_ticket"] });
+    refreshAll();
   };
 
   return (
@@ -236,7 +311,7 @@ export default function TestSales() {
                   <TableCell className={`text-right ${saldo > 0 ? "font-semibold text-destructive" : "text-muted-foreground"}`}>${saldo.toFixed(2)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">
                     {s.is_credit && s.payment_status !== "paid" && (
-                      <Button size="sm" variant="outline" onClick={() => { setAbonoSale(s); setAbonoAmount(saldo); }}><DollarSign className="mr-1 h-3 w-3" />Abonar</Button>
+                      <Button size="sm" variant="outline" onClick={() => openAbono(s)}><DollarSign className="mr-1 h-3 w-3" />Abonar</Button>
                     )}
                     <Button size="sm" variant="ghost" title="Ver detalle" onClick={() => setView(s.id)}><Eye className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" title="Ver / imprimir ticket" onClick={() => setTicketId(s.id)}><Printer className="h-4 w-4" /></Button>
@@ -296,10 +371,14 @@ export default function TestSales() {
                   </>
                 )}
               </div>
+              {detail.sale.is_credit && <div className="border-t pt-3"><CreditPaymentsHistory saleId={detail.sale.id} /></div>}
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setView(null)}>Cerrar</Button>
+            {detail?.sale?.is_credit && detail.sale.payment_status !== "paid" && (
+              <Button variant="outline" onClick={() => { openAbono(detail.sale); setView(null); }}><DollarSign className="mr-2 h-4 w-4" />Abonar</Button>
+            )}
             <Button variant="outline" onClick={() => { setEditId(view); setView(null); }}><Pencil className="mr-2 h-4 w-4" />Editar</Button>
             <Button onClick={() => { setTicketId(view); setView(null); }}><Printer className="mr-2 h-4 w-4" />Ver / imprimir ticket</Button>
           </DialogFooter>
@@ -307,7 +386,7 @@ export default function TestSales() {
       </Dialog>
 
       <Dialog open={!!abonoSale} onOpenChange={(o) => !o && setAbonoSale(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Registrar abono</DialogTitle></DialogHeader>
           {abonoSale && (
             <div className="space-y-3">
@@ -317,12 +396,28 @@ export default function TestSales() {
                 <p>Pagado: ${Number(abonoSale.amount_paid ?? 0).toFixed(2)}</p>
                 <p className="font-bold text-destructive">Saldo: ${(Number(abonoSale.total) - Number(abonoSale.amount_paid ?? 0)).toFixed(2)}</p>
               </div>
-              <div><Label>Monto</Label><Input type="number" min={0.01} step="0.01" value={abonoAmount} onChange={(e) => setAbonoAmount(parseFloat(e.target.value) || 0)} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label>Monto</Label><Input type="number" min={0.01} step="0.01" value={abonoAmount} onChange={(e) => setAbonoAmount(parseFloat(e.target.value) || 0)} /></div>
+                <div><Label>Método de pago</Label>
+                  <Select value={abonoMethod} onValueChange={setAbonoMethod}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="efectivo">Efectivo</SelectItem>
+                      <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                      <SelectItem value="transferencia">Transferencia</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div><Label>Nota (opcional)</Label>
+                <Input placeholder="Ej. referencia de transferencia, quién entregó…" value={abonoNotes} onChange={(e) => setAbonoNotes(e.target.value)} maxLength={200} />
+              </div>
+              <div className="border-t pt-3"><CreditPaymentsHistory saleId={abonoSale.id} /></div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAbonoSale(null)}>Cancelar</Button>
-            <Button onClick={submitAbono}>Registrar abono</Button>
+            <Button onClick={submitAbono} disabled={abonoSaving}>{abonoSaving ? "Guardando…" : "Registrar abono"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

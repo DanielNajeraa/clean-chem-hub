@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/Page";
@@ -9,7 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Minus, Image as ImageIcon, Search } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Trash2, Plus, Minus, Image as ImageIcon, Search, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useProductImageUrls } from "@/hooks/use-product-image-urls";
@@ -30,17 +37,54 @@ type CartLine = {
 
 const litersFor = (p: Preset) => p === "1L" ? 1 : p === "5L" ? 5 : p === "20L" ? 20 : 0;
 
+// The sale in progress is kept in localStorage so it survives leaving the page or reloading.
+// It is only cleared when the sale is charged or the user presses "Vaciar".
+type Draft = { cart: CartLine[]; customer: string; payment: string; discount: number };
+const EMPTY_DRAFT: Draft = { cart: [], customer: "none", payment: "efectivo", discount: 0 };
+const draftKey = (userId: string | undefined) => `test-pos-draft:${userId ?? "anon"}`;
+
+function loadDraft(userId: string | undefined): Draft {
+  try {
+    const raw = localStorage.getItem(draftKey(userId));
+    if (!raw) return EMPTY_DRAFT;
+    const d = JSON.parse(raw);
+    return {
+      cart: Array.isArray(d.cart) ? d.cart : [],
+      customer: typeof d.customer === "string" ? d.customer : "none",
+      payment: typeof d.payment === "string" ? d.payment : "efectivo",
+      discount: Number(d.discount) || 0,
+    };
+  } catch {
+    return EMPTY_DRAFT;
+  }
+}
+
 export default function TestPOSPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"litro" | "pieza">("litro");
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [customer, setCustomer] = useState<string>("none");
-  const [payment, setPayment] = useState<string>("efectivo");
-  const [discount, setDiscount] = useState<number>(0);
+  const [initialDraft] = useState(() => loadDraft(user?.id));
+  const [cart, setCart] = useState<CartLine[]>(initialDraft.cart);
+  const [customer, setCustomer] = useState<string>(initialDraft.customer);
+  const [payment, setPayment] = useState<string>(initialDraft.payment);
+  const [discount, setDiscount] = useState<number>(initialDraft.discount);
+  const [customerOpen, setCustomerOpen] = useState(false);
   const [lastSaleId, setLastSaleId] = useState<string | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(draftKey(user?.id), JSON.stringify({ cart, customer, payment, discount }));
+    } catch { /* storage unavailable: the sale just won't survive navigation */ }
+  }, [user?.id, cart, customer, payment, discount]);
+
+  const resetSale = () => {
+    setCart([]);
+    setDiscount(0);
+    setCustomer("none");
+    setPayment("efectivo");
+  };
 
   const { data: products = [] } = useQuery({
     queryKey: ["test_products_pos"],
@@ -52,8 +96,9 @@ export default function TestPOSPage() {
   const { urls: imgUrls, refreshImage } = useProductImageUrls(products);
   const { data: customers = [] } = useQuery({
     queryKey: ["customers_test_pos"],
-    queryFn: async () => (await supabase.from("customers").select("id,name")).data ?? [],
+    queryFn: async () => (await supabase.from("customers").select("id,name,phone").order("name")).data ?? [],
   });
+  const selectedCustomer = customers.find((c: any) => c.id === customer);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -76,10 +121,8 @@ export default function TestPOSPage() {
     setCart((c) => {
       const idx = c.findIndex((l) => l.key === key);
       if (idx >= 0) {
-        const copy = [...c];
-        copy[idx].quantity += 1;
-        copy[idx].subtotal = copy[idx].quantity * copy[idx].unit_price;
-        return copy;
+        // new object instead of mutating: StrictMode runs this updater twice in dev
+        return c.map((l, i) => i === idx ? { ...l, quantity: l.quantity + 1, subtotal: (l.quantity + 1) * l.unit_price } : l);
       }
       return [...c, {
         key, product_id: p.id, product_name: p.name, presentation: pres,
@@ -95,10 +138,8 @@ export default function TestPOSPage() {
     setCart((c) => {
       const idx = c.findIndex((l) => l.key === key);
       if (idx >= 0) {
-        const copy = [...c];
-        copy[idx].quantity += 1;
-        copy[idx].subtotal = copy[idx].quantity * copy[idx].unit_price;
-        return copy;
+        // new object instead of mutating: StrictMode runs this updater twice in dev
+        return c.map((l, i) => i === idx ? { ...l, quantity: l.quantity + 1, subtotal: (l.quantity + 1) * l.unit_price } : l);
       }
       return [...c, {
         key, product_id: p.id, product_name: p.name, presentation: "pieza",
@@ -164,10 +205,7 @@ export default function TestPOSPage() {
     toast.success("Venta registrada");
     setLastSaleId(sale.id);
     setTicketOpen(true);
-    setCart([]);
-    setDiscount(0);
-    setCustomer("none");
-    setPayment("efectivo");
+    resetSale();
     qc.invalidateQueries({ queryKey: ["test_products_pos"] });
     qc.invalidateQueries({ queryKey: ["test_products"] });
     qc.invalidateQueries({ queryKey: ["test_sales_list"] });
@@ -245,7 +283,27 @@ export default function TestPOSPage() {
         </div>
 
         <Card className="p-4 h-fit sticky top-4">
-          <h3 className="font-semibold mb-3">Carrito</h3>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold">Carrito</h3>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground"
+                  disabled={cart.length === 0 && customer === "none" && discount === 0 && payment === "efectivo"}>
+                  <Trash2 className="mr-1 h-3 w-3" /> Vaciar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Vaciar la venta?</AlertDialogTitle>
+                  <AlertDialogDescription>Se quitarán todos los productos, el cliente, el método de pago y el descuento.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={resetSale}>Vaciar</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
           <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
             {cart.length === 0 && <div className="text-sm text-muted-foreground">Vacío.</div>}
             {cart.map((l) => (
@@ -270,13 +328,39 @@ export default function TestPOSPage() {
 
           <div className="mt-3 space-y-2 border-t pt-3">
             <div><Label className="text-xs">Cliente</Label>
-              <Select value={customer} onValueChange={setCustomer}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Público general</SelectItem>
-                  {customers.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={customerOpen} className="w-full justify-between font-normal">
+                    <span className="truncate">{selectedCustomer?.name ?? "Público general"}</span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar por nombre o teléfono…" />
+                    <CommandList>
+                      <CommandEmpty>No se encontró el cliente.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem value="__none__ Público general" onSelect={() => { setCustomer("none"); setCustomerOpen(false); }}>
+                          <Check className={cn("mr-2 h-4 w-4", customer === "none" ? "opacity-100" : "opacity-0")} />
+                          Público general
+                        </CommandItem>
+                        {customers.map((c: any) => (
+                          // value includes the id so two customers with the same name stay separate items
+                          <CommandItem key={c.id} value={`${c.name} ${c.phone ?? ""} ${c.id}`}
+                            onSelect={() => { setCustomer(c.id); setCustomerOpen(false); }}>
+                            <Check className={cn("mr-2 h-4 w-4", customer === c.id ? "opacity-100" : "opacity-0")} />
+                            <div className="flex flex-col">
+                              <span>{c.name}</span>
+                              {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div><Label className="text-xs">Método de pago</Label>
               <Select value={payment} onValueChange={setPayment}>

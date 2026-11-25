@@ -3,11 +3,12 @@
 //
 // Usage:  npm run backup
 // Optional env vars: BACKUP_EMAIL, BACKUP_PASSWORD, BACKUP_DIR
+// For unattended runs (Task Scheduler) put them in .env.backup.local (git-ignored via *.local).
 //
 // Not included: auth passwords (cannot be exported) and the DB schema (already in supabase/migrations).
 
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync, readdirSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
@@ -97,7 +98,18 @@ async function listFiles(supabase, bucket, prefix = "") {
   }
 }
 
+// Credentials for unattended runs; real env vars win over the file.
+function loadBackupCredentials() {
+  let text;
+  try { text = readFileSync(join(ROOT, ".env.backup.local"), "utf8"); } catch { return; }
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^\s*(BACKUP_[A-Z_]+)\s*=\s*"?([^"]*)"?\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
+}
+
 async function main() {
+  loadBackupCredentials();
   const { url, key } = readProdEnv();
   const email = process.env.BACKUP_EMAIL || (await ask("Email admin de producción: "));
   const password = process.env.BACKUP_PASSWORD || (await ask("Contraseña: ", true));
@@ -111,7 +123,8 @@ async function main() {
   }
 
   const stamp = new Date().toISOString().slice(0, 16).replace("T", "_").replace(":", "-");
-  const out = join(process.env.BACKUP_DIR || join(homedir(), "Documents", "Respaldos-BeeClean"), stamp);
+  const baseDir = process.env.BACKUP_DIR || join(homedir(), "Documents", "Respaldos-BeeClean");
+  const out = join(baseDir, stamp);
   mkdirSync(join(out, "json"), { recursive: true });
   mkdirSync(join(out, "csv"), { recursive: true });
   console.log(`\nRespaldando ${url}\n→ ${out}\n`);
@@ -126,6 +139,12 @@ async function main() {
       manifest.tables[table] = rows.length;
       console.log(`  ✓ ${table.padEnd(24)} ${rows.length} filas`);
     } catch (e) {
+      // A table from a migration that hasn't reached prod yet has no data to lose: skip, don't fail.
+      if (/could not find the table/i.test(e.message)) {
+        (manifest.skipped ??= []).push(table);
+        console.log(`  – ${table.padEnd(24)} no existe aún en producción (omitida)`);
+        continue;
+      }
       manifest.errors.push({ table, error: e.message });
       console.log(`  ✗ ${table.padEnd(24)} ${e.message}`);
     }
@@ -154,7 +173,16 @@ async function main() {
   writeFileSync(join(out, "manifest.json"), JSON.stringify(manifest, null, 2));
   await supabase.auth.signOut();
   console.log(manifest.errors.length ? `\nTerminado con ${manifest.errors.length} error(es); revisa manifest.json` : "\n✅ Respaldo completo");
-  if (manifest.errors.length) process.exitCode = 1;
+  if (manifest.errors.length) { process.exitCode = 1; return; }
+
+  // Keep only the newest backup. Runs only after a clean backup, so a failed run never leaves zero copies.
+  // Matches only our timestamp folders, so anything else in baseDir is left alone.
+  for (const name of readdirSync(baseDir)) {
+    if (name !== stamp && /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}$/.test(name)) {
+      rmSync(join(baseDir, name), { recursive: true, force: true });
+      console.log(`  🗑  Borrado respaldo anterior ${name}`);
+    }
+  }
 }
 
 main().catch((e) => { console.error(`\n❌ ${e.message}`); process.exit(1); });
